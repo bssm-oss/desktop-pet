@@ -1,0 +1,71 @@
+name: Build Check
+
+# Runs on every PR and every push to master.
+# Verifies the project compiles with zero errors and zero warnings.
+# This is the required status check before any PR can be merged.
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Compile (arm64, macOS 14)
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Print Swift version
+        run: swift --version
+
+      - name: Compile with swiftc
+        run: |
+          set -euo pipefail
+
+          SDK=$(xcrun --sdk macosx --show-sdk-path)
+          mkdir -p /tmp/dp-check-build
+
+          swiftc \
+            -sdk "$SDK" \
+            -target arm64-apple-macosx14.0 \
+            -O \
+            -framework AppKit \
+            -framework AVFoundation \
+            -framework CoreGraphics \
+            -framework CoreServices \
+            -framework ServiceManagement \
+            DesktopPet/App/main.swift \
+            DesktopPet/App/AppDelegate.swift \
+            DesktopPet/Settings/AppSettings.swift \
+            DesktopPet/Settings/SettingsView.swift \
+            DesktopPet/Playback/FrameSequence.swift \
+            DesktopPet/Playback/GIFDecoder.swift \
+            DesktopPet/Playback/APNGDecoder.swift \
+            DesktopPet/Playback/PNGSequenceDecoder.swift \
+            DesktopPet/Playback/AnimationPlayer.swift \
+            DesktopPet/Playback/VideoPlayer.swift \
+            DesktopPet/Utilities/PlaceholderAnimation.swift \
+            DesktopPet/Utilities/SecurityScopedAccess.swift \
+            DesktopPet/Window/OverlayWindow.swift \
+            DesktopPet/Window/PetView.swift \
+            DesktopPet/Window/OverlayWindowController.swift \
+            DesktopPet/MenuBar/MenuBarController.swift \
+            -o /tmp/dp-check-build/DesktopPet \
+            2>&1 | tee /tmp/compile.log
+
+          # Fail if any warnings exist (zero-warning policy)
+          if grep -q ": warning:" /tmp/compile.log; then
+            echo ""
+            echo "::error::Build produced warnings. Fix all warnings before merging."
+            exit 1
+          fi
+
+          echo "✓ Compiled with zero errors and zero warnings"
+          ls -lh /tmp/dp-check-build/DesktopPet

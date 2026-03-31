@@ -1,0 +1,45 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before requesting a feature, please check that it aligns with the project goals:
+        - Native macOS only (no Electron, no cross-platform frameworks)
+        - No third-party Swift Package Manager dependencies
+        - Lightweight and performant
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the use case or pain point.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How should this work from the user's perspective?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What other approaches did you think of?
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Compatibility check
+      options:
+        - label: Does not require third-party Swift packages
+          required: true
+        - label: Works within Apple-only frameworks (AppKit, AVFoundation, ImageIO, etc.)
+          required: true
+        - label: Does not break transparency or Spaces behavior
+          required: true

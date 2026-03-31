@@ -3,41 +3,51 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*'          # v1.0.0, v1.2.3 등 태그 푸시 시 자동 실행
-  workflow_dispatch:  # 수동 실행도 가능
+      - 'v[0-9]*'   # v1.0.0, v1.2.3, etc.
+  workflow_dispatch:
     inputs:
       version:
-        description: 'Version tag (e.g. v1.0.0) — used only for workflow_dispatch'
-        required: false
-        default: ''
+        description: 'Version tag (e.g. v1.2.0)'
+        required: true
+        default: 'v1.0.0'
+
+# Required for creating releases and pushing Cask updates back to master
+permissions:
+  contents: write
 
 jobs:
-  build:
-    name: Build DesktopPet.dmg
-    runs-on: macos-14   # Apple Silicon runner (M1)
+  build-and-release:
+    name: Build DMG and publish release
+    runs-on: macos-14
 
     steps:
-      # ── 1. 소스 체크아웃 ────────────────────────────────────────────────
+      # ── 1. Checkout ───────────────────────────────────────────────────────
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Need full history so we can push the Cask SHA256 commit back
+          fetch-depth: 0
 
-      # ── 2. Swift 컴파일러 버전 확인 ─────────────────────────────────────
-      - name: Verify Swift
-        run: swift --version
-
-      # ── 3. swiftc로 직접 빌드 (.app 번들 구성) ──────────────────────────
-      # xcodebuild 없이 Command Line Tools만으로 빌드 가능.
-      # 코드 서명 없이 빌드 — 사용자가 시스템 설정에서 허용해야 함.
-      - name: Build with swiftc
+      # ── 2. Confirm toolchain ──────────────────────────────────────────────
+      - name: Print Swift and SDK version
         run: |
+          swift --version
+          xcrun --sdk macosx --show-sdk-path
+
+      # ── 3. Build .app bundle with swiftc ──────────────────────────────────
+      # We use swiftc directly — no xcodebuild needed, no Xcode.app required.
+      # All frameworks are Apple-only; zero third-party dependencies.
+      - name: Build DesktopPet.app
+        run: |
+          set -euo pipefail
+
           SDK=$(xcrun --sdk macosx --show-sdk-path)
-          APP_DIR="$PWD/build/DesktopPet.app"
-          BIN_DIR="$APP_DIR/Contents/MacOS"
-          RES_DIR="$APP_DIR/Contents/Resources"
+          APP="$PWD/build/DesktopPet.app"
+          BIN="$APP/Contents/MacOS"
+          RES="$APP/Contents/Resources"
 
-          mkdir -p "$BIN_DIR" "$RES_DIR"
+          mkdir -p "$BIN" "$RES"
 
-          # Compile all Swift sources
           swiftc \
             -sdk "$SDK" \
             -target arm64-apple-macosx14.0 \
@@ -63,95 +73,97 @@ jobs:
             DesktopPet/Window/PetView.swift \
             DesktopPet/Window/OverlayWindowController.swift \
             DesktopPet/MenuBar/MenuBarController.swift \
-            -o "$BIN_DIR/DesktopPet"
+            -o "$BIN/DesktopPet"
 
-          # Copy Info.plist and Assets
-          cp DesktopPet/App/Info.plist "$APP_DIR/Contents/Info.plist"
+          cp DesktopPet/App/Info.plist "$APP/Contents/Info.plist"
+          printf 'APPL????' > "$APP/Contents/PkgInfo"
 
-          # Compile asset catalog (xcrun actool)
+          # Compile asset catalog (AppIcon + AccentColor)
           xcrun actool \
             --output-format human-readable-text \
             --notices --warnings \
             --platform macosx \
             --minimum-deployment-target 14.0 \
-            --compile "$RES_DIR" \
-            DesktopPet/Assets.xcassets 2>/dev/null || true
+            --compile "$RES" \
+            DesktopPet/Assets.xcassets \
+          || true   # non-fatal: icon is cosmetic only
 
-          echo "App bundle created:"
-          find "$APP_DIR" -type f | sort
+          echo "=== Bundle contents ==="
+          find "$APP" -type f | sort
 
-      # ── 4. .app → .dmg 패키징 ───────────────────────────────────────────
+      # ── 4. Ad-hoc code sign ───────────────────────────────────────────────
+      # Prevents Gatekeeper "damaged" error on first launch.
+      # Users still need to run: xattr -cr /Applications/DesktopPet.app
+      - name: Ad-hoc code sign
+        run: |
+          codesign --force --deep --sign - build/DesktopPet.app
+          codesign --verify --verbose build/DesktopPet.app
+
+      # ── 5. Package as DMG ─────────────────────────────────────────────────
       - name: Create DMG
         run: |
-          APP_PATH="$PWD/build/DesktopPet.app"
-          DMG_PATH="$PWD/build/DesktopPet.dmg"
+          set -euo pipefail
+
+          mkdir -p build/dmg-stage
+          cp -R build/DesktopPet.app build/dmg-stage/
+          ln -s /Applications build/dmg-stage/Applications
 
           hdiutil create \
             -volname "Desktop Pet" \
-            -srcfolder "$APP_PATH" \
+            -srcfolder build/dmg-stage \
             -ov \
             -format UDZO \
-            "$DMG_PATH"
+            build/DesktopPet.dmg
 
-          echo "DMG created: $DMG_PATH"
-          ls -lh "$DMG_PATH"
+          ls -lh build/DesktopPet.dmg
 
-      # ── 5. DMG SHA256 계산 ──────────────────────────────────────────────
+      # ── 6. Compute SHA256 ─────────────────────────────────────────────────
       - name: Compute SHA256
         id: sha
         run: |
-          SHA=$(shasum -a 256 "$PWD/build/DesktopPet.dmg" | awk '{print $1}')
-          echo "sha256=$SHA" >> $GITHUB_OUTPUT
+          SHA=$(shasum -a 256 build/DesktopPet.dmg | awk '{print $1}')
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
           echo "SHA256: $SHA"
 
-      # ── 6. 버전 태그 추출 ───────────────────────────────────────────────
-      - name: Get version
+      # ── 7. Resolve version string ─────────────────────────────────────────
+      - name: Resolve version
         id: version
         run: |
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
             VERSION="${GITHUB_REF#refs/tags/}"
-          elif [[ -n "${{ github.event.inputs.version }}" ]]; then
-            VERSION="${{ github.event.inputs.version }}"
           else
-            VERSION="dev-$(git rev-parse --short HEAD)"
+            VERSION="${{ github.event.inputs.version }}"
           fi
-          # Strip leading 'v' for semver
           SEMVER="${VERSION#v}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "semver=$SEMVER" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION (semver: $SEMVER)"
+          echo "version=$VERSION"   >> "$GITHUB_OUTPUT"
+          echo "semver=$SEMVER"     >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION  Semver: $SEMVER"
 
-      # ── 7. Homebrew Cask SHA256 업데이트 ────────────────────────────────
-      - name: Update Homebrew Cask SHA256
-        if: startsWith(github.ref, 'refs/tags/')
+      # ── 8. Update Homebrew Cask ───────────────────────────────────────────
+      - name: Patch Casks/desktop-pet.rb
         run: |
-          VERSION="${{ steps.version.outputs.semver }}"
+          VER="${{ steps.version.outputs.semver }}"
           SHA="${{ steps.sha.outputs.sha256 }}"
 
-          sed -i '' \
-            "s/sha256 .*/sha256 \"$SHA\"/" \
-            Casks/desktop-pet.rb
+          # macOS sed requires '' after -i
+          sed -i '' "s/^  version \".*\"/  version \"${VER}\"/" Casks/desktop-pet.rb
+          sed -i '' "s/^  sha256 .*/  sha256 \"${SHA}\"/"       Casks/desktop-pet.rb
 
-          sed -i '' \
-            "s/version \".*\"/version \"$VERSION\"/" \
-            Casks/desktop-pet.rb
-
-          echo "Updated Casks/desktop-pet.rb:"
+          echo "=== Updated Cask ==="
           cat Casks/desktop-pet.rb
 
-      # ── 8. 업데이트된 Cask 파일 커밋 (태그 빌드일 때만) ─────────────────
-      - name: Commit updated Cask
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Commit and push updated Cask
         run: |
-          git config user.name "github-actions[bot]"
+          git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Casks/desktop-pet.rb
-          git diff --staged --quiet || git commit -m "chore(cask): bump version to ${{ steps.version.outputs.semver }} and update SHA256 [skip ci]"
+          git diff --staged --quiet \
+            || git commit -m "chore(cask): bump to ${{ steps.version.outputs.semver }} and update SHA256 [skip ci]"
           git push origin HEAD:master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── 9. GitHub Release 생성 + DMG 업로드 ────────────────────────────
+      # ── 9. Create GitHub Release ──────────────────────────────────────────
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -160,28 +172,33 @@ jobs:
           body: |
             ## Desktop Pet ${{ steps.version.outputs.version }}
 
-            ### Homebrew로 설치 (권장)
+            ### Install via Homebrew (recommended)
             ```bash
             brew tap bssm-oss/desktop-pet https://github.com/bssm-oss/desktop-pet.git
             brew install --cask bssm-oss/desktop-pet/desktop-pet
+            # Remove quarantine flag (required for unsigned builds)
+            xattr -cr /Applications/DesktopPet.app
+            open /Applications/DesktopPet.app
             ```
 
-            ### 직접 다운로드
-            1. 아래 `DesktopPet.dmg` 다운로드
-            2. DMG 열기 → `DesktopPet.app`을 `/Applications` 폴더로 드래그
-            3. 처음 실행 시: 시스템 설정 → 개인 정보 보호 및 보안 → "확인 없이 열기" 클릭
-            4. 메뉴바에 🐾 아이콘이 나타나면 완료
+            ### Direct download
+            1. Download **`DesktopPet.dmg`** below
+            2. Open DMG → drag `DesktopPet.app` to **Applications**
+            3. Run in terminal:
+               ```bash
+               xattr -cr /Applications/DesktopPet.app
+               open /Applications/DesktopPet.app
+               ```
 
-            ### 요구사항
-            - macOS 14.0 (Sonoma) 이상
-            - Apple Silicon (M1/M2/M3/M4)
+            ### Requirements
+            - macOS 14.0 (Sonoma) or later
+            - Apple Silicon (M1 / M2 / M3 / M4)
 
-            ### 지원 형식
-            - GIF, APNG, PNG 시퀀스 (투명 배경 지원)
-            - MP4, MOV, ProRes 4444, HEVC with Alpha
+            ### Supported formats
+            GIF · APNG · PNG sequence folder · MP4 · MOV · ProRes 4444 · HEVC with Alpha
 
-            ### SHA256
-            `${{ steps.sha.outputs.sha256 }}`
+            ---
+            **SHA-256:** `${{ steps.sha.outputs.sha256 }}`
           files: build/DesktopPet.dmg
           draft: false
           prerelease: false
