@@ -1,10 +1,6 @@
 // PetView.swift
-// The NSView that hosts the CALayer render target.
-// Handles:
-//   - Displaying animation frames via CALayer.contents (GPU composited)
-//   - Drag-to-reposition (when not locked or click-through)
-//   - File drop import
-//   - Cursor management
+// NSView hosting the CALayer render target.
+// Handles frame display, drag-to-reposition, file drop, flip transforms.
 
 import AppKit
 import QuartzCore
@@ -19,55 +15,55 @@ final class PetView: NSView {
 
     // MARK: - Public
     weak var delegate: PetViewDelegate?
-    var lockPosition: Bool = false
-    var clickThrough: Bool = false
+    var lockPosition: Bool  = false
+    var clickThrough: Bool  = false
+
+    var flipHorizontal: Bool = false { didSet { applyFlip() } }
+    var flipVertical:   Bool = false { didSet { applyFlip() } }
 
     // MARK: - Render Layer
-    // We use a dedicated CALayer for the image content.
-    // Setting layer.contents = cgImage is a zero-copy GPU upload on Apple Silicon.
     private let imageLayer = CALayer()
 
     // MARK: - Drag State
     private var dragStartMouseLocation: NSPoint?
-    private var dragStartWindowOrigin: NSPoint?
+    private var dragStartWindowOrigin:  NSPoint?
 
     // MARK: - Init
 
-    override init(frame: NSRect) {
-        super.init(frame: frame)
-        setup()
-    }
-
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        setup()
-    }
+    override init(frame: NSRect) { super.init(frame: frame); setup() }
+    required init?(coder: NSCoder) { super.init(coder: coder); setup() }
 
     private func setup() {
-        // Enable layer-backed rendering
         wantsLayer = true
         layer?.backgroundColor = CGColor.clear
 
-        // Image layer fills the view
         imageLayer.frame = bounds
         imageLayer.contentsGravity = .resizeAspect
         imageLayer.backgroundColor = CGColor.clear
         imageLayer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
         layer?.addSublayer(imageLayer)
 
-        // Register as a drop target
         registerForDraggedTypes([.fileURL])
     }
 
     // MARK: - Frame Display
 
-    /// Called by AnimationPlayer delegate on the main thread.
-    /// Sets the CGImage as layer contents — GPU composited, no CPU pixel copy.
     func display(frame: CGImage) {
-        // Disable implicit animation to avoid ghosting between frames
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         imageLayer.contents = frame
+        CATransaction.commit()
+    }
+
+    // MARK: - Flip
+
+    private func applyFlip() {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        var t = CATransform3DIdentity
+        if flipHorizontal { t = CATransform3DScale(t, -1, 1, 1) }
+        if flipVertical   { t = CATransform3DScale(t, 1, -1, 1) }
+        imageLayer.transform = t
         CATransaction.commit()
     }
 
@@ -78,42 +74,39 @@ final class PetView: NSView {
         imageLayer.frame = bounds
     }
 
-    // MARK: - Mouse Events (Drag)
+    // MARK: - Mouse Events
 
     override func mouseDown(with event: NSEvent) {
         guard !lockPosition, !clickThrough else { return }
         dragStartMouseLocation = NSEvent.mouseLocation
-        dragStartWindowOrigin = window?.frame.origin
+        dragStartWindowOrigin  = window?.frame.origin
     }
 
     override func mouseDragged(with event: NSEvent) {
         guard !lockPosition, !clickThrough,
-              let startMouse = dragStartMouseLocation,
+              let startMouse  = dragStartMouseLocation,
               let startOrigin = dragStartWindowOrigin,
               let window = window
         else { return }
 
-        let current = NSEvent.mouseLocation
-        let dx = current.x - startMouse.x
-        let dy = current.y - startMouse.y
-
+        let cur = NSEvent.mouseLocation
         window.setFrameOrigin(NSPoint(
-            x: startOrigin.x + dx,
-            y: startOrigin.y + dy
+            x: startOrigin.x + cur.x - startMouse.x,
+            y: startOrigin.y + cur.y - startMouse.y
         ))
     }
 
     override func mouseUp(with event: NSEvent) {
         guard dragStartMouseLocation != nil else { return }
         dragStartMouseLocation = nil
-        dragStartWindowOrigin = nil
+        dragStartWindowOrigin  = nil
         delegate?.petViewDidFinishDrag(self)
     }
 
     // MARK: - Drag & Drop Import
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
-        return fileURL(from: sender) != nil ? .copy : []
+        fileURL(from: sender) != nil ? .copy : []
     }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
@@ -124,18 +117,16 @@ final class PetView: NSView {
 
     private func fileURL(from info: NSDraggingInfo) -> URL? {
         guard let item = info.draggingPasteboard.pasteboardItems?.first,
-              let urlString = item.string(forType: .fileURL),
-              let url = URL(string: urlString)
+              let str  = item.string(forType: .fileURL),
+              let url  = URL(string: str)
         else { return nil }
-
-        let ext = url.pathExtension.lowercased()
-        let supported = ["gif", "png", "apng", "mp4", "mov", "m4v"]
-        return supported.contains(ext) ? url : nil
+        let supported = ["gif","png","apng","mp4","mov","m4v"]
+        return supported.contains(url.pathExtension.lowercased()) ? url : nil
     }
 
     // MARK: - Hit Testing
-    // When click-through is enabled, return nil so events pass to windows below.
+
     override func hitTest(_ point: NSPoint) -> NSView? {
-        return clickThrough ? nil : super.hitTest(point)
+        clickThrough ? nil : super.hitTest(point)
     }
 }
