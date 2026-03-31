@@ -1,6 +1,6 @@
 cask "desktop-pet" do
   version "1.0.0"
-  sha256 :no_check # Updated automatically by CI on each release
+  sha256 "584b8965f6e2319d1305cdb98a42b10a9dbf01e1478afac4e9863029d187844f"
 
   url "https://github.com/bssm-oss/desktop-pet/releases/download/v#{version}/DesktopPet.dmg"
   name "Desktop Pet"
