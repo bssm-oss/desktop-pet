@@ -1,5 +1,5 @@
 // MenuBarController.swift
-// Manages the NSStatusItem and its menus.
+// Manages the NSStatusItem and its dropdown menu.
 // Supports multiple pets — each with its own settings panel.
 
 import AppKit
@@ -42,11 +42,7 @@ final class MenuBarController: NSObject {
     }
 
     @objc private func statusButtonClicked(_ sender: NSStatusBarButton) {
-        if NSApp.currentEvent?.type == .rightMouseUp {
-            showContextMenu(sender)
-        } else {
-            showContextMenu(sender)   // left-click also shows menu for multi-pet
-        }
+        showContextMenu(sender)
     }
 
     // MARK: - Context Menu
@@ -59,14 +55,33 @@ final class MenuBarController: NSObject {
         addItem.target = self
         menu.addItem(addItem)
 
+        // ── Hide All / Show All ───────────────────────────────────────────
+        if !pets.isEmpty {
+            let allHidden = pets.allSatisfy { !$0.isVisible }
+            let hideAllItem = NSMenuItem(
+                title: allHidden ? "Show All" : "Hide All",
+                action: #selector(toggleHideAll),
+                keyEquivalent: "h"
+            )
+            hideAllItem.target = self
+            menu.addItem(hideAllItem)
+        }
+
         // ── Per-pet section ───────────────────────────────────────────────
         if !pets.isEmpty {
             menu.addItem(.separator())
             for (idx, pet) in pets.enumerated() {
-                // Use the user-defined label instead of "Pet N"
-                let header = NSMenuItem(title: pet.settings.label, action: nil, keyEquivalent: "")
-                header.isEnabled = false
-                menu.addItem(header)
+                // Header: user's label — clicking opens Settings
+                let headerItem = NSMenuItem(
+                    title: pet.settings.label,
+                    action: #selector(openPetSettings(_:)),
+                    keyEquivalent: ""
+                )
+                headerItem.target = self
+                headerItem.representedObject = pet.settings.instanceID
+                // Show hide/show state with a bullet
+                headerItem.state = pet.isVisible ? .on : .off
+                menu.addItem(headerItem)
 
                 let settingsItem = NSMenuItem(
                     title: "  Settings…",
@@ -77,14 +92,14 @@ final class MenuBarController: NSObject {
                 settingsItem.representedObject = pet.settings.instanceID
                 menu.addItem(settingsItem)
 
-                let importItem = NSMenuItem(
-                    title: "  Import Animation…",
-                    action: #selector(importForPet(_:)),
+                let hideItem = NSMenuItem(
+                    title: pet.isVisible ? "  Hide" : "  Show",
+                    action: #selector(togglePetVisibility(_:)),
                     keyEquivalent: ""
                 )
-                importItem.target = self
-                importItem.representedObject = pet
-                menu.addItem(importItem)
+                hideItem.target = self
+                hideItem.representedObject = pet.settings.instanceID
+                menu.addItem(hideItem)
 
                 let removeItem = NSMenuItem(
                     title: "  Remove",
@@ -116,17 +131,24 @@ final class MenuBarController: NSObject {
         onAddPet?()
     }
 
+    @objc private func toggleHideAll() {
+        let allHidden = pets.allSatisfy { !$0.isVisible }
+        pets.forEach { $0.setVisible(allHidden) }   // if all hidden → show all, else hide all
+    }
+
+    @objc private func togglePetVisibility(_ item: NSMenuItem) {
+        guard let id = item.representedObject as? String,
+              let pet = pets.first(where: { $0.settings.instanceID == id })
+        else { return }
+        pet.setVisible(!pet.isVisible)
+    }
+
     @objc private func openPetSettings(_ item: NSMenuItem) {
         guard let id = item.representedObject as? String,
               let pet = pets.first(where: { $0.settings.instanceID == id }),
               let button = statusItem.button
         else { return }
         toggleSettingsPanel(for: pet, relativeTo: button)
-    }
-
-    @objc private func importForPet(_ item: NSMenuItem) {
-        guard let pet = item.representedObject as? OverlayWindowController else { return }
-        openFilePicker(for: pet)
     }
 
     @objc private func removePet(_ item: NSMenuItem) {
@@ -225,7 +247,6 @@ final class MenuBarController: NSObject {
     /// Called by AppDelegate whenever the pets array changes.
     func update(pets: [OverlayWindowController]) {
         self.pets = pets
-        // Close panels for removed pets
         let activeIDs = Set(pets.map { $0.settings.instanceID })
         for id in settingsPanels.keys where !activeIDs.contains(id) {
             settingsPanels[id]?.orderOut(nil)
