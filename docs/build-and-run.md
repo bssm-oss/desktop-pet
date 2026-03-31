@@ -1,0 +1,100 @@
+# Build & Run
+
+## Requirements
+
+- macOS 14.0 or later
+- Apple Silicon Mac (M1 / M2 / M3 / M4)
+- Xcode 15.0 or later
+- Apple Developer account (free tier is fine for local builds)
+
+---
+
+## Steps
+
+### 1. Clone
+
+```bash
+git clone https://github.com/bssm-oss/desktop-pet.git
+cd desktop-pet
+```
+
+### 2. Open in Xcode
+
+```bash
+open DesktopPet.xcodeproj
+```
+
+### 3. Set signing
+
+In Xcode:
+- Select the `DesktopPet` target
+- Go to **Signing & Capabilities**
+- Set your **Team** (your Apple ID)
+- Bundle ID: `com.bssm-oss.desktop-pet` (or change to your own)
+
+### 4. Build and run
+
+Press `⌘R` or click the Run button.
+
+The app launches silently — no dock icon appears.  
+Look for the 🐾 icon in your menubar.
+
+---
+
+## Testing with evernight.mp4
+
+`evernight.mp4` is a standard H.264 video. It will play correctly but **without transparency** — it will show with a solid background.
+
+To test:
+1. Click 🐾 → "Import Animation…"
+2. Select `evernight.mp4`
+3. The video appears as a floating overlay (with background)
+4. Drag it to reposition
+5. Use the settings panel to adjust opacity, scale, speed
+
+This validates: import flow, looping, positioning, overlay behavior, and playback controls.
+
+---
+
+## Testing with transparent assets
+
+To test true transparency, use one of:
+
+### GIF
+Any animated GIF with transparency. Free sources: [Giphy](https://giphy.com), [Tenor](https://tenor.com).
+
+### APNG
+Any APNG file. Test with: https://apng.onevcat.com/assets/elephant.png
+
+### PNG sequence
+Create a folder with files named:
+```
+frame_0001.png
+frame_0002.png
+frame_0003.png
+...
+```
+Each PNG should have a transparent background (RGBA).  
+Import by selecting the **folder** in the file picker.
+
+### ProRes 4444 (transparent video)
+Export from After Effects or Final Cut Pro as ProRes 4444.  
+This is the recommended format for transparent video on macOS.
+
+---
+
+## Release build
+
+```bash
+xcodebuild -project DesktopPet.xcodeproj \
+           -scheme DesktopPet \
+           -configuration Release \
+           -archivePath build/DesktopPet.xcarchive \
+           archive
+```
+
+---
+
+## Troubleshooting
+
+See [troubleshooting.md](troubleshooting.md).
