@@ -1,6 +1,5 @@
 // SettingsView.swift
-// SwiftUI settings panel. Minimal and clean.
-// Presented as a floating panel from the menubar icon.
+// Per-pet settings panel presented from the menubar.
 
 import SwiftUI
 import ServiceManagement
@@ -8,6 +7,7 @@ import ServiceManagement
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
     var onImport: () -> Void
+    var onRemove: () -> Void
     var onQuit: () -> Void
 
     var body: some View {
@@ -73,8 +73,13 @@ struct SettingsView: View {
 
             Divider()
 
-            // Quit
+            // Bottom buttons
             HStack {
+                Button(role: .destructive, action: onRemove) {
+                    Label("Remove Pet", systemImage: "trash")
+                        .foregroundColor(.red)
+                }
+                .buttonStyle(.plain)
                 Spacer()
                 Button("Quit", action: onQuit)
                     .foregroundColor(.red)
