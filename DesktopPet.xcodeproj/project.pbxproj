@@ -1,0 +1,340 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F001 /* AppDelegate.swift */; };
+		A000 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000 /* main.swift */; };
+		A002 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F002 /* AppSettings.swift */; };
+		A003 /* FrameSequence.swift in Sources */ = {isa = PBXBuildFile; fileRef = F003 /* FrameSequence.swift */; };
+		A004 /* GIFDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F004 /* GIFDecoder.swift */; };
+		A005 /* APNGDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F005 /* APNGDecoder.swift */; };
+		A006 /* PNGSequenceDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F006 /* PNGSequenceDecoder.swift */; };
+		A007 /* AnimationPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F007 /* AnimationPlayer.swift */; };
+		A008 /* VideoPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F008 /* VideoPlayer.swift */; };
+		A009 /* PlaceholderAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F009 /* PlaceholderAnimation.swift */; };
+		A010 /* SecurityScopedAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = F010 /* SecurityScopedAccess.swift */; };
+		A011 /* OverlayWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F011 /* OverlayWindow.swift */; };
+		A012 /* PetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F012 /* PetView.swift */; };
+		A013 /* OverlayWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F013 /* OverlayWindowController.swift */; };
+		A014 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F014 /* SettingsView.swift */; };
+		A015 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F015 /* MenuBarController.swift */; };
+		A016 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F016 /* Assets.xcassets */; };
+		A017 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = F017 /* Info.plist */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		F001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/AppDelegate.swift"; sourceTree = "<group>"; };
+		F000 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/main.swift"; sourceTree = "<group>"; };
+		F002 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Settings/AppSettings.swift"; sourceTree = "<group>"; };
+		F003 /* FrameSequence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Playback/FrameSequence.swift"; sourceTree = "<group>"; };
+		F004 /* GIFDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Playback/GIFDecoder.swift"; sourceTree = "<group>"; };
+		F005 /* APNGDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Playback/APNGDecoder.swift"; sourceTree = "<group>"; };
+		F006 /* PNGSequenceDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Playback/PNGSequenceDecoder.swift"; sourceTree = "<group>"; };
+		F007 /* AnimationPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Playback/AnimationPlayer.swift"; sourceTree = "<group>"; };
+		F008 /* VideoPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Playback/VideoPlayer.swift"; sourceTree = "<group>"; };
+		F009 /* PlaceholderAnimation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Utilities/PlaceholderAnimation.swift"; sourceTree = "<group>"; };
+		F010 /* SecurityScopedAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Utilities/SecurityScopedAccess.swift"; sourceTree = "<group>"; };
+		F011 /* OverlayWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Window/OverlayWindow.swift"; sourceTree = "<group>"; };
+		F012 /* PetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Window/PetView.swift"; sourceTree = "<group>"; };
+		F013 /* OverlayWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Window/OverlayWindowController.swift"; sourceTree = "<group>"; };
+		F014 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Settings/SettingsView.swift"; sourceTree = "<group>"; };
+		F015 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MenuBar/MenuBarController.swift"; sourceTree = "<group>"; };
+		F016 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Assets.xcassets"; sourceTree = "<group>"; };
+		F017 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "App/Info.plist"; sourceTree = "<group>"; };
+		PROD /* DesktopPet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DesktopPet.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		FWKPHASE = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		MAINGROUP = {
+			isa = PBXGroup;
+			children = (
+				SRCGROUP /* DesktopPet */,
+				PRODGROUP /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		PRODGROUP = {
+			isa = PBXGroup;
+			children = (
+				PROD /* DesktopPet.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		SRCGROUP = {
+			isa = PBXGroup;
+			children = (
+				F000 /* main.swift */,
+				F001 /* AppDelegate.swift */,
+				F017 /* Info.plist */,
+				F002 /* AppSettings.swift */,
+				F003 /* FrameSequence.swift */,
+				F004 /* GIFDecoder.swift */,
+				F005 /* APNGDecoder.swift */,
+				F006 /* PNGSequenceDecoder.swift */,
+				F007 /* AnimationPlayer.swift */,
+				F008 /* VideoPlayer.swift */,
+				F009 /* PlaceholderAnimation.swift */,
+				F010 /* SecurityScopedAccess.swift */,
+				F011 /* OverlayWindow.swift */,
+				F012 /* PetView.swift */,
+				F013 /* OverlayWindowController.swift */,
+				F014 /* SettingsView.swift */,
+				F015 /* MenuBarController.swift */,
+				F016 /* Assets.xcassets */,
+			);
+			name = DesktopPet;
+			path = DesktopPet;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		TARGET = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BUILDCFGLIST;
+			buildPhases = (
+				SRCPHASE /* Sources */,
+				FWKPHASE /* Frameworks */,
+				RESPHASE /* Resources */,
+			);
+			buildRules = ();
+			dependencies = ();
+			name = DesktopPet;
+			productName = DesktopPet;
+			productReference = PROD /* DesktopPet.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		PROJECT = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					TARGET = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = PROJCFGLIST;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (en, Base);
+			mainGroup = MAINGROUP;
+			productRefGroup = PRODGROUP;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (TARGET);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		RESPHASE = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A016 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		SRCPHASE = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A000 /* main.swift in Sources */,
+				A001 /* AppDelegate.swift in Sources */,
+				A002 /* AppSettings.swift in Sources */,
+				A003 /* FrameSequence.swift in Sources */,
+				A004 /* GIFDecoder.swift in Sources */,
+				A005 /* APNGDecoder.swift in Sources */,
+				A006 /* PNGSequenceDecoder.swift in Sources */,
+				A007 /* AnimationPlayer.swift in Sources */,
+				A008 /* VideoPlayer.swift in Sources */,
+				A009 /* PlaceholderAnimation.swift in Sources */,
+				A010 /* SecurityScopedAccess.swift in Sources */,
+				A011 /* OverlayWindow.swift in Sources */,
+				A012 /* PetView.swift in Sources */,
+				A013 /* OverlayWindowController.swift in Sources */,
+				A014 /* SettingsView.swift in Sources */,
+				A015 /* MenuBarController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		DEBUGCFG = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_CYCLES = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = ("DEBUG=1", "$(inherited)");
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		RELEASECFG = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		TARGETDEBUGCFG = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = DesktopPet/DesktopPet.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DesktopPet/App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks");
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.bssm-oss.desktop-pet";
+				PRODUCT_NAME = DesktopPet;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		TARGETRELEASECFG = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = DesktopPet/DesktopPet.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DesktopPet/App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks");
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.bssm-oss.desktop-pet";
+				PRODUCT_NAME = DesktopPet;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		PROJCFGLIST = {
+			isa = XCConfigurationList;
+			buildConfigurations = (DEBUGCFG, RELEASECFG);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BUILDCFGLIST = {
+			isa = XCConfigurationList;
+			buildConfigurations = (TARGETDEBUGCFG, TARGETRELEASECFG);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = PROJECT /* Project object */;
+}
