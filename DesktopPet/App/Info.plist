@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Menubar-only: hides dock icon -->
+    <key>LSUIElement</key>
+    <true/>
+
+    <key>CFBundleName</key>
+    <string>DesktopPet</string>
+
+    <key>CFBundleIdentifier</key>
+    <string>com.bssm-oss.desktop-pet</string>
+
+    <key>CFBundleVersion</key>
+    <string>1</string>
+
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+
+    <key>CFBundleExecutable</key>
+    <string>DesktopPet</string>
+
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+
+    <key>NSHighResolutionCapable</key>
+    <true/>
+
+    <!-- Allows reading user-selected files across restarts via security-scoped bookmarks -->
+    <key>com.apple.security.files.user-selected.read-only</key>
+    <true/>
+
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+
+    <key>NSSupportsAutomaticGraphicsSwitching</key>
+    <true/>
+</dict>
+</plist>
