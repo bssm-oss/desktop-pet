@@ -1,48 +1,90 @@
 // AppDelegate.swift
-// Entry point. Configures the app as a menubar-only accessory (no dock icon).
-// Owns the overlay window controller and menubar controller.
-// Restores persisted state on launch.
+// Manages the collection of pets and the single menubar controller.
+// Each pet = one AppSettings instance + one OverlayWindowController.
 
 import AppKit
-import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
-    // MARK: - Owned Controllers
-    private var overlayWindowController: OverlayWindowController?
-    private var menuBarController: MenuBarController?
+    // MARK: - State
+    private var pets: [OverlayWindowController] = []
+    private var menuBarController: MenuBarController!
 
-    // MARK: - Shared Settings (single source of truth)
-    let settings = AppSettings()
+    // Persisted list of instance IDs so we restore all pets on relaunch
+    private let kInstanceIDs = "petInstanceIDs"
+    private var nextIndex: Int {
+        (UserDefaults.standard.array(forKey: kInstanceIDs) as? [String])?.count ?? 0
+    }
 
     // MARK: - Launch
+
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Menubar-only: no dock icon, no activation on launch
         NSApp.setActivationPolicy(.accessory)
 
-        // Build overlay window
-        let overlayWC = OverlayWindowController(settings: settings)
-        self.overlayWindowController = overlayWC
-        overlayWC.showWindow(nil)
+        menuBarController = MenuBarController()
+        menuBarController.onAddPet    = { [weak self] in self?.addPet() }
+        menuBarController.onRemovePet = { [weak self] id in self?.removePet(id: id) }
 
-        // Build menubar icon + menu
-        let menuBar = MenuBarController(
-            settings: settings,
-            overlayWindowController: overlayWC
-        )
-        self.menuBarController = menuBar
+        // Restore previously open pets
+        let savedIDs = UserDefaults.standard.array(forKey: kInstanceIDs) as? [String] ?? []
 
-        // Restore last asset if available
-        if let bookmark = settings.assetBookmark {
-            overlayWC.loadAssetFromBookmark(bookmark)
+        if savedIDs.isEmpty {
+            // First launch: open file picker immediately for one pet
+            addPet()
         } else {
-            // Show built-in placeholder so the window isn't empty
-            overlayWC.loadPlaceholder()
+            for id in savedIDs {
+                let settings = AppSettings(instanceID: id)
+                let wc = OverlayWindowController(settings: settings)
+                wc.showWindow(nil)
+                if let bookmark = settings.assetBookmark {
+                    wc.loadAssetFromBookmark(bookmark)
+                }
+                pets.append(wc)
+            }
+            menuBarController.update(pets: pets)
         }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        // Menubar app — never quit when window closes
         return false
+    }
+
+    // MARK: - Add / Remove
+
+    /// Creates a new pet, opens the file picker for it.
+    /// The window only appears after the user picks a file.
+    func addPet() {
+        let index = (UserDefaults.standard.array(forKey: kInstanceIDs) as? [String])?.count ?? 0
+        let id = "pet-\(index + 1)"
+        let settings = AppSettings(instanceID: id)
+        let wc = OverlayWindowController(settings: settings)
+
+        // Show file picker — pet window appears only on successful pick
+        menuBarController.openFilePicker(for: wc) // picks file → calls wc.loadAsset
+        // After picker, check if an asset was actually loaded (bookmark set)
+        if settings.assetBookmark != nil {
+            wc.showWindow(nil)
+            pets.append(wc)
+            saveInstanceIDs()
+            menuBarController.update(pets: pets)
+        }
+        // If user cancelled picker, wc is just discarded
+    }
+
+    func removePet(id: String) {
+        guard let idx = pets.firstIndex(where: { $0.settings.instanceID == id }) else { return }
+        let wc = pets[idx]
+        wc.settings.removeAllKeys()
+        wc.window?.close()
+        pets.remove(at: idx)
+        saveInstanceIDs()
+        menuBarController.update(pets: pets)
+    }
+
+    // MARK: - Persistence
+
+    private func saveInstanceIDs() {
+        let ids = pets.map { $0.settings.instanceID }
+        UserDefaults.standard.set(ids, forKey: kInstanceIDs)
     }
 }
