@@ -1,6 +1,6 @@
 cask "desktop-pet" do
   version "1.0.0"
-  sha256 "4ab8f09cecf792ac320a1a4ecde12bdee7f5e033f51a7296bc79cda8ef99b604"
+  sha256 "a6d3bfe786473fd1137bc522b06b8a0ec7d3db1a27d41887a903f19c603dd264"
 
   url "https://github.com/bssm-oss/desktop-pet/releases/download/v#{version}/DesktopPet.dmg"
   name "Desktop Pet"
