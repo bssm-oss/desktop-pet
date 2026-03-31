@@ -63,8 +63,8 @@ final class MenuBarController: NSObject {
         if !pets.isEmpty {
             menu.addItem(.separator())
             for (idx, pet) in pets.enumerated() {
-                let petNum = idx + 1
-                let header = NSMenuItem(title: "Pet \(petNum)", action: nil, keyEquivalent: "")
+                // Use the user-defined label instead of "Pet N"
+                let header = NSMenuItem(title: pet.settings.label, action: nil, keyEquivalent: "")
                 header.isEnabled = false
                 menu.addItem(header)
 
@@ -210,7 +210,8 @@ final class MenuBarController: NSObject {
             UTType.quickTimeMovie,
             UTType.folder
         ]
-        panel.message = "Choose a GIF, APNG, PNG sequence folder, or video"
+        let petName = pet.settings.label
+        panel.message = "Choose an animation for \"\(petName)\"\n\nSupported: GIF · APNG · PNG sequence folder · MP4 · MOV"
         panel.prompt = "Open"
 
         NSApp.activate(ignoringOtherApps: true)

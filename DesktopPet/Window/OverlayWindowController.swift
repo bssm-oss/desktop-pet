@@ -79,7 +79,11 @@ final class OverlayWindowController: NSWindowController {
             self?.window?.alphaValue = v
         }.store(in: &cancellables)
 
-        settings.$scale.sink { [weak self] v in
+        // dropFirst(1): skip the initial emit that fires during init.
+        // At that point naturalSize is still (200,200) — the default before any
+        // asset is loaded — so applyScale would recompute the origin from a wrong
+        // center and silently move the window away from its saved position.
+        settings.$scale.dropFirst(1).sink { [weak self] v in
             self?.applyScale(v)
         }.store(in: &cancellables)
 
@@ -210,8 +214,13 @@ final class OverlayWindowController: NSWindowController {
 
     private func resizeWindow(to size: NSSize) {
         guard let window else { return }
-        let newFrame = NSRect(origin: window.frame.origin, size: size)
-        window.setFrame(newFrame, display: true, animate: false)
+        // Preserve the saved origin exactly — do NOT recompute from center.
+        // The origin is the bottom-left corner in macOS screen coordinates.
+        // Re-reading savedPosition() (not window.frame.origin) ensures that
+        // a freshly-restored window uses the persisted value, not whatever
+        // temporary origin was set during the window init phase.
+        let origin = settings.savedPosition()
+        window.setFrame(NSRect(origin: origin, size: size), display: true, animate: false)
     }
 
     private func applyScale(_ scale: Double) {
