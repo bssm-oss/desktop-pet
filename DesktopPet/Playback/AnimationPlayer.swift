@@ -14,6 +14,7 @@ import CoreVideo
 import QuartzCore
 import CoreGraphics
 import Foundation
+import Darwin
 
 @MainActor
 protocol AnimationPlayerDelegate: AnyObject {
@@ -38,8 +39,16 @@ final class AnimationPlayer {
     /// Accumulated playback time in seconds (scaled by speed).
     private var playbackTime: TimeInterval = 0
 
-    /// Host time of the last CVDisplayLink callback (in seconds).
+    /// Host time of the last CVDisplayLink callback (in seconds, converted from Mach time).
     private var lastHostTime: TimeInterval = 0
+
+    /// Cached mach_timebase_info for converting hostTime to seconds.
+    /// Computed once and reused — mach_timebase_info never changes at runtime.
+    private static let machTimebaseInfo: mach_timebase_info_data_t = {
+        var info = mach_timebase_info_data_t()
+        mach_timebase_info(&info)
+        return info
+    }()
 
     /// Last displayed frame index — avoids redundant CALayer commits.
     private var lastFrameIndex: Int = -1
@@ -124,9 +133,12 @@ final class AnimationPlayer {
     private func handleDisplayLinkCallback(now: CVTimeStamp) {
         guard let sequence, sequence.count > 0 else { return }
 
-        // Convert CVTimeStamp to seconds
-        let hostTime = TimeInterval(now.hostTime) / TimeInterval(now.videoTimeScale > 0
-            ? now.videoTimeScale : 1_000_000_000)
+        // Convert CVTimeStamp.hostTime (Mach absolute time) to seconds.
+        // hostTime is in Mach ticks — must be converted via mach_timebase_info.
+        // videoTimeScale is the video output timebase and must NOT be used here.
+        let info = AnimationPlayer.machTimebaseInfo
+        let nanos = now.hostTime * UInt64(info.numer) / UInt64(info.denom)
+        let hostTime = TimeInterval(nanos) / 1_000_000_000.0
 
         // Calculate delta
         let delta: TimeInterval
