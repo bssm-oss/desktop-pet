@@ -10,6 +10,9 @@
     <key>CFBundleName</key>
     <string>DesktopPet</string>
 
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+
     <key>CFBundleIdentifier</key>
     <string>com.bssm-oss.desktop-pet</string>
 
