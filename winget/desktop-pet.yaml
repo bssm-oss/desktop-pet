@@ -1,0 +1,15 @@
+Id: bssm-oss.desktop-pet
+Version: 1.0.0
+Name: Desktop Pet
+Publisher: bssm-oss
+License: MIT
+Homepage: https://github.com/bssm-oss/desktop-pet
+Description: Desktop Pet - lightweight desktop overlay app for Windows
+Tags: desktop-pet, overlay, animation, gif, apng
+Installers:
+  - Arch: x64
+    InstallerType: zip
+    Url: https://github.com/bssm-oss/desktop-pet/releases/latest/download/DesktopPet-Windows.zip
+    Sha256: PLACEHOLDER_UPDATE_ON_RELEASE
+ManifestType: singleton
+ManifestVersion: 1.6.0
