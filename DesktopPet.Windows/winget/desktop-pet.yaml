@@ -8,8 +8,11 @@ Description: Desktop Pet - lightweight desktop overlay app for Windows
 Tags: desktop-pet, overlay, animation, gif, apng
 Installers:
   - Arch: x64
-    InstallerType: zip
-    Url: https://github.com/bssm-oss/desktop-pet/releases/latest/download/DesktopPet-Windows.zip
+    InstallerType: exe
+    InstallerTypeIdentifier: nullsoft
+    Url: https://github.com/bssm-oss/desktop-pet/releases/latest/download/DesktopPet-Windows-Setup.exe
     Sha256: PLACEHOLDER_UPDATE_ON_RELEASE
+    Scope: user
+    InstallModes: interactive
 ManifestType: singleton
 ManifestVersion: 1.6.0
