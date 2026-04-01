@@ -9,11 +9,19 @@
 //
 // Only updates CALayer.contents when the frame index actually changes,
 // so the GPU compositor is not disturbed on frames where nothing changes.
+//
+// Thread safety:
+// - CVDisplayLink fires its callback on a private thread.
+// - The main thread calls load/play/pause/stop.
+// - `playbackState` (time, lastFrameIndex, lastHostTime) and `sequence` are
+//   accessed from both threads, so they are protected by `stateLock`.
 
 import CoreVideo
 import QuartzCore
 import CoreGraphics
 import Foundation
+import Darwin
+import os
 
 @MainActor
 protocol AnimationPlayerDelegate: AnyObject {
@@ -31,18 +39,30 @@ final class AnimationPlayer {
 
     private(set) var isPlaying: Bool = false
 
-    // MARK: - Private
-    private var sequence: FrameSequence?
+    // MARK: - Lock-protected state
+    //
+    // These properties are read/written from both the main thread and the
+    // CVDisplayLink callback thread. Access them only while holding `stateLock`.
+
+    private var stateLock = OSAllocatedUnfairLock(initialState: PlaybackState())
+
+    private struct PlaybackState {
+        var sequence: FrameSequence? = nil
+        var playbackTime: TimeInterval = 0
+        var lastHostTime: TimeInterval = 0
+        var lastFrameIndex: Int = -1
+    }
+
+    // MARK: - Main-thread-only state
     private var displayLink: CVDisplayLink?
 
-    /// Accumulated playback time in seconds (scaled by speed).
-    private var playbackTime: TimeInterval = 0
-
-    /// Host time of the last CVDisplayLink callback (in seconds).
-    private var lastHostTime: TimeInterval = 0
-
-    /// Last displayed frame index — avoids redundant CALayer commits.
-    private var lastFrameIndex: Int = -1
+    // MARK: - Cached mach_timebase_info
+    // mach_timebase_info never changes at runtime — compute once.
+    private static let machTimebaseInfo: mach_timebase_info_data_t = {
+        var info = mach_timebase_info_data_t()
+        mach_timebase_info(&info)
+        return info
+    }()
 
     // MARK: - Load
 
@@ -50,10 +70,12 @@ final class AnimationPlayer {
     func load(_ sequence: FrameSequence) {
         let wasPlaying = isPlaying
         stop()
-        self.sequence = sequence
-        playbackTime = 0
-        lastFrameIndex = -1
-        lastHostTime = 0
+        stateLock.withLock { state in
+            state.sequence = sequence
+            state.playbackTime = 0
+            state.lastFrameIndex = -1
+            state.lastHostTime = 0
+        }
 
         // Show first frame immediately on main thread
         if let first = sequence.frames.first {
@@ -66,7 +88,9 @@ final class AnimationPlayer {
     // MARK: - Playback Control
 
     func play() {
-        guard !isPlaying, sequence != nil else { return }
+        guard !isPlaying else { return }
+        let hasSequence = stateLock.withLock { $0.sequence != nil }
+        guard hasSequence else { return }
         isPlaying = true
         startDisplayLink()
     }
@@ -83,9 +107,11 @@ final class AnimationPlayer {
 
     func stop() {
         pause()
-        playbackTime = 0
-        lastFrameIndex = -1
-        lastHostTime = 0
+        stateLock.withLock { state in
+            state.playbackTime = 0
+            state.lastFrameIndex = -1
+            state.lastHostTime = 0
+        }
     }
 
     // MARK: - CVDisplayLink
@@ -122,35 +148,43 @@ final class AnimationPlayer {
     // MARK: - Callback (fires on CVDisplayLink thread, NOT main thread)
 
     private func handleDisplayLinkCallback(now: CVTimeStamp) {
-        guard let sequence, sequence.count > 0 else { return }
+        // Convert CVTimeStamp.hostTime (Mach absolute time) to seconds.
+        // hostTime is in Mach ticks — must be converted via mach_timebase_info.
+        // videoTimeScale is the video output timebase and must NOT be used here.
+        let info = AnimationPlayer.machTimebaseInfo
+        let nanos = now.hostTime * UInt64(info.numer) / UInt64(info.denom)
+        let hostTime = TimeInterval(nanos) / 1_000_000_000.0
 
-        // Convert CVTimeStamp to seconds
-        let hostTime = TimeInterval(now.hostTime) / TimeInterval(now.videoTimeScale > 0
-            ? now.videoTimeScale : 1_000_000_000)
+        // All shared state is accessed under the lock.
+        let result: (frameIndex: Int, frame: CGImage)? = stateLock.withLock { state in
+            guard let sequence = state.sequence, sequence.count > 0 else { return nil }
 
-        // Calculate delta
-        let delta: TimeInterval
-        if lastHostTime > 0 {
-            delta = hostTime - lastHostTime
-        } else {
-            delta = 0
+            // Calculate delta
+            let delta: TimeInterval
+            if state.lastHostTime > 0 {
+                delta = hostTime - state.lastHostTime
+            } else {
+                delta = 0
+            }
+            state.lastHostTime = hostTime
+
+            // Advance playback time
+            state.playbackTime += delta * speed
+
+            // Determine frame
+            let newIndex = sequence.frameIndex(at: state.playbackTime)
+            guard newIndex != state.lastFrameIndex else { return nil }
+            state.lastFrameIndex = newIndex
+
+            return (newIndex, sequence.frames[newIndex])
         }
-        lastHostTime = hostTime
 
-        // Advance playback time
-        playbackTime += delta * speed
-
-        // Determine frame
-        let newIndex = sequence.frameIndex(at: playbackTime)
-        guard newIndex != lastFrameIndex else { return }
-        lastFrameIndex = newIndex
-
-        let frame = sequence.frames[newIndex]
+        guard let result else { return }
 
         // Dispatch to main thread for CALayer update
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            self.delegate?.animationPlayer(self, didAdvanceTo: frame)
+            self.delegate?.animationPlayer(self, didAdvanceTo: result.frame)
         }
     }
 
