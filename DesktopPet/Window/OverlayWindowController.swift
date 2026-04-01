@@ -22,6 +22,7 @@ final class OverlayWindowController: NSWindowController {
 
     // MARK: - State
     private var currentAssetURL: URL?
+    private var currentAssetIsSecurityScoped: Bool = false
     private var isVideoMode: Bool = false
     private var naturalSize: NSSize = NSSize(width: 200, height: 200)
 
@@ -44,6 +45,10 @@ final class OverlayWindowController: NSWindowController {
     }
 
     required init?(coder: NSCoder) { fatalError("not used") }
+
+    deinit {
+        stopCurrentSecurityScopedAccess()
+    }
 
     // MARK: - Setup
 
@@ -139,12 +144,22 @@ final class OverlayWindowController: NSWindowController {
     /// Restore asset from a security-scoped bookmark (app restart).
     func loadAssetFromBookmark(_ bookmark: Data) {
         guard let url = SecurityScopedAccess.resolve(bookmark: bookmark) else { return }
+        stopCurrentSecurityScopedAccess()
         _ = url.startAccessingSecurityScopedResource()
+        currentAssetIsSecurityScoped = true
         loadAsset(url: url)
+    }
+
+    /// Stop accessing the current security-scoped resource if one is active.
+    private func stopCurrentSecurityScopedAccess() {
+        guard currentAssetIsSecurityScoped, let url = currentAssetURL else { return }
+        url.stopAccessingSecurityScopedResource()
+        currentAssetIsSecurityScoped = false
     }
 
     /// Load an asset from a URL (file picker or drag-drop).
     func loadAsset(url: URL) {
+        stopCurrentSecurityScopedAccess()
         currentAssetURL = url
         let ext = url.pathExtension.lowercased()
 
