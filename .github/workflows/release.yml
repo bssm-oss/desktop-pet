@@ -1,33 +1,29 @@
-name: Build and Release
+name: Release
 
 on:
   push:
     tags:
-      - 'v*'          # v1.0.0, v1.2.3 등 태그 푸시 시 자동 실행
-  workflow_dispatch:  # 수동 실행도 가능
-    inputs:
-      version:
-        description: 'Version tag (e.g. v1.0.0) — used only for workflow_dispatch'
-        required: false
-        default: ''
+      - 'v*'
 
 jobs:
-  build:
-    name: Build DesktopPet.dmg
-    runs-on: macos-14   # Apple Silicon runner (M1)
+  build-mac:
+    name: Build macOS DMG
+    runs-on: macos-14
+    outputs:
+      sha256: ${{ steps.sha.outputs.sha256 }}
+      semver: ${{ steps.version.outputs.semver }}
 
     steps:
-      # ── 1. 소스 체크아웃 ────────────────────────────────────────────────
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # ── 2. Swift 컴파일러 버전 확인 ─────────────────────────────────────
-      - name: Verify Swift
-        run: swift --version
+      - name: Get version
+        id: version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          SEMVER="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "semver=$SEMVER" >> $GITHUB_OUTPUT
 
-      # ── 3. swiftc로 직접 빌드 (.app 번들 구성) ──────────────────────────
-      # xcodebuild 없이 Command Line Tools만으로 빌드 가능.
-      # 코드 서명 없이 빌드 — 사용자가 시스템 설정에서 허용해야 함.
       - name: Build with swiftc
         run: |
           SDK=$(xcrun --sdk macosx --show-sdk-path)
@@ -37,7 +33,6 @@ jobs:
 
           mkdir -p "$BIN_DIR" "$RES_DIR"
 
-          # Compile all Swift sources
           swiftc \
             -sdk "$SDK" \
             -target arm64-apple-macosx14.0 \
@@ -65,10 +60,7 @@ jobs:
             DesktopPet/MenuBar/MenuBarController.swift \
             -o "$BIN_DIR/DesktopPet"
 
-          # Copy Info.plist and Assets
           cp DesktopPet/App/Info.plist "$APP_DIR/Contents/Info.plist"
-
-          # Compile asset catalog (xcrun actool)
           xcrun actool \
             --output-format human-readable-text \
             --notices --warnings \
@@ -77,71 +69,28 @@ jobs:
             --compile "$RES_DIR" \
             DesktopPet/Assets.xcassets 2>/dev/null || true
 
-          echo "App bundle created:"
-          find "$APP_DIR" -type f | sort
-
-      # ── 4. .app → .dmg 패키징 ───────────────────────────────────────────
       - name: Create DMG
         run: |
-          APP_PATH="$PWD/build/DesktopPet.app"
-          DMG_PATH="$PWD/build/DesktopPet.dmg"
-
           hdiutil create \
             -volname "Desktop Pet" \
-            -srcfolder "$APP_PATH" \
-            -ov \
-            -format UDZO \
-            "$DMG_PATH"
+            -srcfolder "$PWD/build/DesktopPet.app" \
+            -ov -format UDZO \
+            "$PWD/build/DesktopPet.dmg"
 
-          echo "DMG created: $DMG_PATH"
-          ls -lh "$DMG_PATH"
-
-      # ── 5. DMG SHA256 계산 ──────────────────────────────────────────────
       - name: Compute SHA256
         id: sha
         run: |
           SHA=$(shasum -a 256 "$PWD/build/DesktopPet.dmg" | awk '{print $1}')
           echo "sha256=$SHA" >> $GITHUB_OUTPUT
-          echo "SHA256: $SHA"
 
-      # ── 6. 버전 태그 추출 ───────────────────────────────────────────────
-      - name: Get version
-        id: version
-        run: |
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            VERSION="${GITHUB_REF#refs/tags/}"
-          elif [[ -n "${{ github.event.inputs.version }}" ]]; then
-            VERSION="${{ github.event.inputs.version }}"
-          else
-            VERSION="dev-$(git rev-parse --short HEAD)"
-          fi
-          # Strip leading 'v' for semver
-          SEMVER="${VERSION#v}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "semver=$SEMVER" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION (semver: $SEMVER)"
-
-      # ── 7. Homebrew Cask SHA256 업데이트 ────────────────────────────────
-      - name: Update Homebrew Cask SHA256
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Update Homebrew Cask
         run: |
           VERSION="${{ steps.version.outputs.semver }}"
           SHA="${{ steps.sha.outputs.sha256 }}"
+          sed -i '' "s/sha256 .*/sha256 \"$SHA\"/" Casks/desktop-pet.rb
+          sed -i '' "s/version \".*\"/version \"$VERSION\"/" Casks/desktop-pet.rb
 
-          sed -i '' \
-            "s/sha256 .*/sha256 \"$SHA\"/" \
-            Casks/desktop-pet.rb
-
-          sed -i '' \
-            "s/version \".*\"/version \"$VERSION\"/" \
-            Casks/desktop-pet.rb
-
-          echo "Updated Casks/desktop-pet.rb:"
-          cat Casks/desktop-pet.rb
-
-      # ── 8. 업데이트된 Cask 파일 커밋 (태그 빌드일 때만) ─────────────────
       - name: Commit updated Cask
-        if: startsWith(github.ref, 'refs/tags/')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -151,38 +100,115 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── 9. GitHub Release 생성 + DMG 업로드 ────────────────────────────
-      - name: Create GitHub Release
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DesktopPet-macOS
+          path: build/DesktopPet.dmg
+
+  build-windows:
+    name: Build Windows Installer
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref }}" -replace '^refs/tags/v', ''
+          echo "semver=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Generate app icon
+        shell: pwsh
+        run: |
+          magick `
+            "DesktopPet/Assets.xcassets/AppIcon.appiconset/icon_16x16.png" `
+            "DesktopPet/Assets.xcassets/AppIcon.appiconset/icon_32x32.png" `
+            "DesktopPet/Assets.xcassets/AppIcon.appiconset/icon_128x128.png" `
+            "DesktopPet/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" `
+            "DesktopPet.Windows/app.ico"
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+
+      - name: Build
+        shell: msys2 {0}
+        run: |
+          cd DesktopPet.Windows
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DINCLUDE_ICON=ON
+          cmake --build build --config Release
+
+      - name: Install NSIS
+        run: choco install nsis --no-progress -y
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.semver }}"
+          & "C:\Program Files (x86)\NSIS\makensis.exe" /DAPP_VERSION=$version installer.nsi
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DesktopPet-Windows-Setup
+          path: DesktopPet-Windows-Setup.exe
+
+  release:
+    name: Create GitHub Release
+    needs: [build-mac, build-windows]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DesktopPet-macOS
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DesktopPet-Windows-Setup
+
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.version }}
-          name: "Desktop Pet ${{ steps.version.outputs.version }}"
+          name: "Desktop Pet ${{ github.ref_name }}"
           body: |
-            ## Desktop Pet ${{ steps.version.outputs.version }}
+            ## Desktop Pet ${{ github.ref_name }}
 
-            ### Homebrew로 설치 (권장)
+            ### macOS 설치 (Homebrew)
             ```bash
             brew tap bssm-oss/desktop-pet https://github.com/bssm-oss/desktop-pet.git
             brew install --cask bssm-oss/desktop-pet/desktop-pet
             ```
 
-            ### 직접 다운로드
-            1. 아래 `DesktopPet.dmg` 다운로드
+            ### macOS 직접 다운로드
+            1. `DesktopPet.dmg` 다운로드
             2. DMG 열기 → `DesktopPet.app`을 `/Applications` 폴더로 드래그
-            3. 처음 실행 시: 시스템 설정 → 개인 정보 보호 및 보안 → "확인 없이 열기" 클릭
-            4. 메뉴바에 🐾 아이콘이 나타나면 완료
+            3. 처음 실행 시: 시스템 설정 → 개인 정보 보호 및 보안 → "확인 없이 열기"
+
+            ### Windows 설치
+            1. `DesktopPet-Windows-Setup.exe` 다운로드 후 실행
+            2. 시스템 트레이(우측 하단)에 아이콘이 나타나면 완료
 
             ### 요구사항
-            - macOS 14.0 (Sonoma) 이상
-            - Apple Silicon (M1/M2/M3/M4)
+            - macOS 14.0 (Sonoma) 이상, Apple Silicon
+            - Windows 10/11 (x64)
 
-            ### 지원 형식
-            - GIF, APNG, PNG 시퀀스 (투명 배경 지원)
-            - MP4, MOV, ProRes 4444, HEVC with Alpha
-
-            ### SHA256
-            `${{ steps.sha.outputs.sha256 }}`
-          files: build/DesktopPet.dmg
+            ### SHA256 (macOS DMG)
+            `${{ needs.build-mac.outputs.sha256 }}`
+          files: |
+            DesktopPet.dmg
+            DesktopPet-Windows-Setup.exe
           draft: false
           prerelease: false
         env:

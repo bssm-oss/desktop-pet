@@ -77,25 +77,35 @@ if(MSVC)
 endif()
 
 if(MINGW)
+    # windres must output COFF object files (.o) so GCC can link them.
+    # Microsoft binary .res format is not accepted by the MinGW linker.
     add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/manifest.res
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/manifest.o
         COMMAND ${CMAKE_RC_COMPILER} -i ${CMAKE_CURRENT_SOURCE_DIR}/manifest.rc
-            -o ${CMAKE_CURRENT_BINARY_DIR}/manifest.res
+            -o ${CMAKE_CURRENT_BINARY_DIR}/manifest.o
             --include-dir ${CMAKE_CURRENT_SOURCE_DIR}
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/manifest.rc
                 ${CMAKE_CURRENT_SOURCE_DIR}/App.manifest)
-    target_sources(DesktopPet PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/manifest.res)
+    target_sources(DesktopPet PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/manifest.o)
+
+    add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/resource.o
+        COMMAND ${CMAKE_RC_COMPILER} -i ${CMAKE_CURRENT_SOURCE_DIR}/Resource.rc
+            -o ${CMAKE_CURRENT_BINARY_DIR}/resource.o
+            --include-dir ${CMAKE_CURRENT_SOURCE_DIR}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/Resource.rc
+                ${CMAKE_CURRENT_SOURCE_DIR}/Resource.h)
+    target_sources(DesktopPet PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/resource.o)
 
     option(INCLUDE_ICON "Embed application icon from app.ico" OFF)
     if(INCLUDE_ICON)
         add_custom_command(
-            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/icon.res
+            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/icon.o
             COMMAND ${CMAKE_RC_COMPILER} -i ${CMAKE_CURRENT_SOURCE_DIR}/icon.rc
-                -o ${CMAKE_CURRENT_BINARY_DIR}/icon.res
+                -o ${CMAKE_CURRENT_BINARY_DIR}/icon.o
                 --include-dir ${CMAKE_CURRENT_SOURCE_DIR}
             DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/icon.rc
                     ${CMAKE_CURRENT_SOURCE_DIR}/app.ico)
-        target_sources(DesktopPet PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/icon.res)
-        target_compile_definitions(DesktopPet PRIVATE HAS_APP_ICON)
+        target_sources(DesktopPet PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/icon.o)
     endif()
 endif()

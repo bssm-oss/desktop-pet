@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef IDC_STATIC
+#define IDC_STATIC          (-1)
+#endif
+
 #define IDR_TRAY_ICON       101
 #define IDD_SETTINGS        201
 #define IDC_CHK_PLAYING     2001

@@ -3,7 +3,6 @@ name: Build Windows
 on:
   push:
     branches: [master]
-    tags: ['v*']
   pull_request:
     branches: [master]
 
@@ -40,20 +39,16 @@ jobs:
           cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DINCLUDE_ICON=ON
           cmake --build build --config Release
 
+      - name: Install NSIS
+        run: choco install nsis --no-progress -y
+
       - name: Build installer
         shell: pwsh
         run: |
-          $version = if ("${{ github.ref }}" -match "^refs/tags/v(.+)$") { $Matches[1] } else { "dev" }
-          & "C:\Program Files (x86)\NSIS\makensis.exe" /DAPP_VERSION=$version installer.nsi
+          & "C:\Program Files (x86)\NSIS\makensis.exe" /DAPP_VERSION=dev installer.nsi
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: DesktopPet-Windows-Setup
           path: DesktopPet-Windows-Setup.exe
-
-      - name: Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: DesktopPet-Windows-Setup.exe
