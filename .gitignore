@@ -36,6 +36,26 @@ desktop-pet/Cargo.lock
 .build/
 .swiftpm/
 
+# Windows build output
+DesktopPet.Windows/build/
+*.obj
+*.exe
+*.dll
+*.lib
+*.pdb
+*.res
+*.ilk
+*.exp
+
+# Installer output (release artifact — not source)
+DesktopPet-Windows-Setup.exe
+dist/
+
+# Tools / IDE
+.claude/
+.vscode/
+nul
+
 # Test assets (large files)
 *.mp4
 *.mov
