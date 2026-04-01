@@ -180,10 +180,8 @@ void OverlayWindow::renderFrame(const FrameSequence::Frame& frame) {
     }
 
     if (dstW == frame.width && dstH == frame.height && !settings_.flipHorizontal && !settings_.flipVertical) {
-        // No scaling or flip — fast path
         memcpy(bitsCache_, frame.pixels.data(), frame.pixels.size());
     } else {
-        // Scale and/or flip using AlphaBlend
         HDC hdcSrc = CreateCompatibleDC(nullptr);
 
         BITMAPINFOHEADER srcBi = {};
@@ -200,17 +198,44 @@ void OverlayWindow::renderFrame(const FrameSequence::Frame& frame) {
         if (!hbmSrc) { DeleteDC(hdcSrc); return; }
 
         memcpy(srcBits, frame.pixels.data(), frame.pixels.size());
+
+        if (settings_.flipHorizontal) {
+            int rowBytes = frame.width * 4;
+            std::vector<BYTE> tmp(rowBytes);
+            BYTE* p = (BYTE*)srcBits;
+            for (int y = 0; y < frame.height; ++y) {
+                BYTE* row = p + y * rowBytes;
+                for (int x = 0; x < frame.width / 2; ++x) {
+                    int lx = x * 4, rx = (frame.width - 1 - x) * 4;
+                    tmp[lx]   = row[lx];   tmp[lx+1] = row[lx+1];
+                    tmp[lx+2] = row[lx+2]; tmp[lx+3] = row[lx+3];
+                    row[lx]   = row[rx];   row[lx+1] = row[rx+1];
+                    row[lx+2] = row[rx+2]; row[lx+3] = row[rx+3];
+                    row[rx]   = tmp[lx];   row[rx+1] = tmp[lx+1];
+                    row[rx+2] = tmp[lx+2]; row[rx+3] = tmp[lx+3];
+                }
+            }
+        }
+        if (settings_.flipVertical) {
+            int rowBytes = frame.width * 4;
+            std::vector<BYTE> tmp(rowBytes);
+            BYTE* p = (BYTE*)srcBits;
+            for (int y = 0; y < frame.height / 2; ++y) {
+                BYTE* top = p + y * rowBytes;
+                BYTE* bot = p + (frame.height - 1 - y) * rowBytes;
+                memcpy(tmp.data(), top, rowBytes);
+                memcpy(top, bot, rowBytes);
+                memcpy(bot, tmp.data(), rowBytes);
+            }
+        }
+
         HBITMAP hbmSrcOld = (HBITMAP)SelectObject(hdcSrc, hbmSrc);
 
         memset(bitsCache_, 0, (size_t)dstW * dstH * 4);
 
         BLENDFUNCTION bfScale = { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA };
-        int xDst = 0, yDst = 0, wDst = dstW, hDst = dstH;
-        int xSrc = 0, ySrc = 0, wSrc = frame.width, hSrc = frame.height;
-        if (settings_.flipHorizontal) { xDst = dstW; wDst = -dstW; }
-        if (settings_.flipVertical)   { yDst = dstH; hDst = -dstH; }
-        AlphaBlend(hdcMem_, xDst, yDst, wDst, hDst,
-                   hdcSrc, xSrc, ySrc, wSrc, hSrc, bfScale);
+        AlphaBlend(hdcMem_, 0, 0, dstW, dstH,
+                   hdcSrc, 0, 0, frame.width, frame.height, bfScale);
 
         SelectObject(hdcSrc, hbmSrcOld);
         DeleteObject(hbmSrc);
