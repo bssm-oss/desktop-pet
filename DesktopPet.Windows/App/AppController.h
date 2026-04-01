@@ -34,6 +34,7 @@ private:
     void saveInstanceIDs();
     std::vector<std::string> loadInstanceIDs();
     int nextPetIndex();
+    int petCounter_ = 0;
 
     struct PetEntry {
         std::unique_ptr<AppSettings> settings;

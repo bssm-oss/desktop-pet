@@ -9,6 +9,7 @@
 #include <windows.h>
 #include <chrono>
 #include <algorithm>
+#include <cstdlib>
 
 AppController* AppController::s_instance = nullptr;
 AppController::AppController() { s_instance = this; }
@@ -289,7 +290,7 @@ void AppController::quit() {
     PostMessageW(msgHwnd_, WM_DESTROY, 0, 0);
 }
 
-int AppController::nextPetIndex() { return (int)pets_.size() + 1; }
+int AppController::nextPetIndex() { return ++petCounter_; }
 
 std::vector<std::string> AppController::loadInstanceIDs() {
     std::wstring p = AppSettings::configFilePath();
@@ -356,5 +357,10 @@ void AppController::restorePets() {
         entry.player = std::move(player);
         entry.sequence.reset(seq);
         pets_.push_back(std::move(entry));
+        int num = 0;
+        if (id.rfind("pet-", 0) == 0) {
+            num = std::atoi(id.c_str() + 4);
+        }
+        if (num > petCounter_) petCounter_ = num;
     }
 }
