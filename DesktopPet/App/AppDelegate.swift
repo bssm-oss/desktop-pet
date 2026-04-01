@@ -12,8 +12,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // Persisted list of instance IDs so we restore all pets on relaunch
     private let kInstanceIDs = "petInstanceIDs"
-    private var nextIndex: Int {
-        (UserDefaults.standard.array(forKey: kInstanceIDs) as? [String])?.count ?? 0
+
+    /// Returns a collision-free ID by taking the max existing numeric suffix and adding 1.
+    /// Using count-based IDs caused collisions: deleting pet-2 from ["pet-1","pet-2","pet-3"]
+    /// made the next pet also "pet-3", silently overwriting its UserDefaults keys.
+    private var nextPetID: String {
+        let existing = UserDefaults.standard.array(forKey: kInstanceIDs) as? [String] ?? []
+        let maxIdx = existing
+            .compactMap { Int($0.replacingOccurrences(of: "pet-", with: "")) }
+            .max() ?? 0
+        return "pet-\(maxIdx + 1)"
     }
 
     // MARK: - Launch
@@ -54,8 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Creates a new pet, opens the file picker for it.
     /// The window only appears after the user picks a file.
     func addPet() {
-        let index = (UserDefaults.standard.array(forKey: kInstanceIDs) as? [String])?.count ?? 0
-        let id = "pet-\(index + 1)"
+        let id = nextPetID
         let settings = AppSettings(instanceID: id)
         let wc = OverlayWindowController(settings: settings)
 
