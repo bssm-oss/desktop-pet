@@ -1,11 +1,13 @@
 # 🐾 Desktop Pet
 
-A lightweight, native macOS desktop overlay app for Apple Silicon Macs.  
-Import a GIF, APNG, PNG sequence, or video — it floats on your screen, loops forever, and stays visible across all Spaces. Run multiple pets at once, each with its own file and settings.
+A lightweight, native desktop overlay app.  
+Import a GIF, APNG, PNG sequence, or video — it floats on your screen, loops forever, and stays visible across all Spaces / virtual desktops. Run multiple pets at once, each with its own file and settings.
+
+**macOS 14+** (Swift + AppKit) · **Windows 10+** (Win32 + C++17)
 
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
+![Windows 10+](https://img.shields.io/badge/Windows-10%2B-blue)
 ![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-Optimized-green)
-![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ---
@@ -111,6 +113,58 @@ swiftc \
 cp DesktopPet/App/Info.plist build/DesktopPet.app/Contents/Info.plist
 open build/DesktopPet.app
 ```
+
+---
+
+## 🪟 Windows 설치
+
+### 방법 1 — Scoop (권장)
+
+[Scoop](https://scoop.sh)이 설치되어 있다면:
+
+```powershell
+scoop bucket add desktop-pet https://github.com/bssm-oss/desktop-pet.git
+scoop install desktop-pet
+```
+
+> **Scoop이 없다면:** PowerShell에서 아래 명령으로 먼저 설치하세요.
+> ```powershell>+
+> irm get.scoop.sh | iex
+> ```
+
+### 방법 2 — WinGet
+
+```powershell
+winget install bssm-oss.desktop-pet
+```
+
+### 방법 3 — 직접 다운로드
+
+1. 이 페이지 오른쪽 **[Releases](https://github.com/bssm-oss/desktop-pet/releases)** 클릭
+2. 최신 버전의 **`DesktopPet-Windows.zip`** 다운로드
+3. 압축 해제 후 `DesktopPet.exe` 실행
+
+> 첫 실행 시 Windows Defender 경고가 뜰 수 있습니다.
+> **추가 정보 → 실행** 클릭하세요. 서명되지 않은 오픈소스 앱이기 때문입니다.
+
+### 방법 4 — 소스에서 직접 빌드
+
+요구사항: Windows 10+, MSYS2 (MinGW-w64)
+
+```powershell
+# MSYS2 설치 (없다면)
+winget install -e --id MSYS2.MSYS2
+
+# MSYS2 UCRT64 터미널에서:
+pacman -S --noconfirm mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
+
+git clone https://github.com/bssm-oss/desktop-pet.git
+cd desktop-pet/Windows
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+```
+
+빌드 결과: `Windows/build/DesktopPet.exe`
 
 ---
 
@@ -244,15 +298,31 @@ Desktop Pet은 네이티브 Swift + AppKit으로 만들어졌습니다.
 ## 프로젝트 구조
 
 ```
-DesktopPet/
-├── App/          # AppDelegate, main.swift, Info.plist
-├── Window/       # OverlayWindow, PetView, OverlayWindowController
-├── Playback/     # AnimationPlayer, GIFDecoder, APNGDecoder, PNGSequenceDecoder, VideoPlayer
-├── MenuBar/      # MenuBarController
-├── Settings/     # AppSettings, SettingsView
-└── Utilities/    # PlaceholderAnimation, SecurityScopedAccess
-Casks/
-└── desktop-pet.rb   # Homebrew Cask formula
+├── DesktopPet/             # macOS 소스 (Swift + AppKit)
+│   ├── App/                # AppDelegate, main.swift, Info.plist
+│   ├── Window/             # OverlayWindow, PetView, OverlayWindowController
+│   ├── Playback/           # AnimationPlayer, decoders, FrameSequence
+│   ├── MenuBar/            # MenuBarController
+│   ├── Settings/           # AppSettings, SettingsView
+│   └── Utilities/          # PlaceholderAnimation, SecurityScopedAccess
+│
+├── Windows/                # Windows 소스 (C++17 + Win32)
+│   ├── CMakeLists.txt
+│   └── DesktopPet/
+│       ├── App/            # WinMain, AppController
+│       ├── Window/         # OverlayWindow, PetRender
+│       ├── Playback/       # AnimationPlayer, GIF/APNG/PNG decoders
+│       ├── TrayIcon/       # TrayController (시스템 트레이)
+│       ├── Settings/       # AppSettings, SettingsDialog
+│       └── Utilities/      # PlaceholderAnimation
+│
+├── Casks/                  # Homebrew Cask (macOS)
+│   └── desktop-pet.rb
+├── bucket/                 # Scoop manifest (Windows)
+│   └── desktop-pet.json
+├── winget/                 # WinGet manifest (Windows)
+│   └── desktop-pet.yaml
+└── docs/
 ```
 
 ---
