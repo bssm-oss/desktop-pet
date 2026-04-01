@@ -179,11 +179,11 @@ void OverlayWindow::renderFrame(const FrameSequence::Frame& frame) {
         cachedH_ = dstH;
     }
 
-    if (dstW == frame.width && dstH == frame.height) {
-        // No scaling — fast path
+    if (dstW == frame.width && dstH == frame.height && !settings_.flipHorizontal && !settings_.flipVertical) {
+        // No scaling or flip — fast path
         memcpy(bitsCache_, frame.pixels.data(), frame.pixels.size());
     } else {
-        // Scale using AlphaBlend, which handles premultiplied alpha correctly
+        // Scale and/or flip using AlphaBlend
         HDC hdcSrc = CreateCompatibleDC(nullptr);
 
         BITMAPINFOHEADER srcBi = {};
@@ -202,12 +202,15 @@ void OverlayWindow::renderFrame(const FrameSequence::Frame& frame) {
         memcpy(srcBits, frame.pixels.data(), frame.pixels.size());
         HBITMAP hbmSrcOld = (HBITMAP)SelectObject(hdcSrc, hbmSrc);
 
-        // Clear destination first
         memset(bitsCache_, 0, (size_t)dstW * dstH * 4);
 
         BLENDFUNCTION bfScale = { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA };
-        AlphaBlend(hdcMem_, 0, 0, dstW, dstH,
-                   hdcSrc, 0, 0, frame.width, frame.height, bfScale);
+        int xDst = 0, yDst = 0, wDst = dstW, hDst = dstH;
+        int xSrc = 0, ySrc = 0, wSrc = frame.width, hSrc = frame.height;
+        if (settings_.flipHorizontal) { xDst = dstW; wDst = -dstW; }
+        if (settings_.flipVertical)   { yDst = dstH; hDst = -dstH; }
+        AlphaBlend(hdcMem_, xDst, yDst, wDst, hDst,
+                   hdcSrc, xSrc, ySrc, wSrc, hSrc, bfScale);
 
         SelectObject(hdcSrc, hbmSrcOld);
         DeleteObject(hbmSrc);
