@@ -88,6 +88,12 @@ static INT_PTR CALLBACK dlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp) {
             applyFromUI(hDlg);
             DestroyWindow(hDlg);
             return TRUE;
+        default:
+            if (HIWORD(wp) == BN_CLICKED) {
+                applyFromUI(hDlg);
+                return TRUE;
+            }
+            break;
         }
         break;
     case WM_HSCROLL:
