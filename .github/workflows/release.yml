@@ -1,4 +1,4 @@
-name: Build and Release
+name: Release
 
 on:
   push:
@@ -19,6 +19,9 @@ jobs:
   build-and-release:
     name: Build DMG and publish release
     runs-on: macos-14
+    outputs:
+      sha256: ${{ steps.sha.outputs.sha256 }}
+      semver: ${{ steps.version.outputs.semver }}
 
     steps:
       # ── 1. Checkout ───────────────────────────────────────────────────────
@@ -163,14 +166,95 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DesktopPet-macOS
+          path: build/DesktopPet.dmg
+
+  build-windows:
+    name: Build Windows Installer
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref }}" -match '^refs/tags/v') {
+            $version = "${{ github.ref }}" -replace '^refs/tags/v', ''
+          } else {
+            $version = "${{ github.event.inputs.version }}" -replace '^v', ''
+          }
+          echo "semver=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Generate app icon
+        shell: pwsh
+        run: |
+          magick `
+            "DesktopPet/Assets.xcassets/AppIcon.appiconset/icon_16x16.png" `
+            "DesktopPet/Assets.xcassets/AppIcon.appiconset/icon_32x32.png" `
+            "DesktopPet/Assets.xcassets/AppIcon.appiconset/icon_128x128.png" `
+            "DesktopPet/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" `
+            "DesktopPet.Windows/app.ico"
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+
+      - name: Build
+        shell: msys2 {0}
+        run: |
+          cd DesktopPet.Windows
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DINCLUDE_ICON=ON
+          cmake --build build --config Release
+
+      - name: Install NSIS
+        run: choco install nsis --no-progress -y
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.semver }}"
+          & "C:\Program Files (x86)\NSIS\makensis.exe" /DAPP_VERSION=$version DesktopPet.Windows/installer.nsi
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DesktopPet-Windows-Setup
+          path: DesktopPet-Windows-Setup.exe
+
+  release:
+    name: Create GitHub Release
+    needs: [build-and-release, build-windows]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DesktopPet-macOS
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DesktopPet-Windows-Setup
+
       # ── 9. Create GitHub Release ──────────────────────────────────────────
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.version }}
-          name: "Desktop Pet ${{ steps.version.outputs.version }}"
+          name: "Desktop Pet ${{ github.ref_name }}"
           body: |
-            ## Desktop Pet ${{ steps.version.outputs.version }}
+            ## Desktop Pet ${{ github.ref_name }}
 
             ### Install via Homebrew (recommended)
             ```bash
@@ -181,7 +265,7 @@ jobs:
             open /Applications/DesktopPet.app
             ```
 
-            ### Direct download
+            ### Direct download (macOS)
             1. Download **`DesktopPet.dmg`** below
             2. Open DMG → drag `DesktopPet.app` to **Applications**
             3. Run in terminal:
@@ -190,16 +274,24 @@ jobs:
                open /Applications/DesktopPet.app
                ```
 
+            ### Windows 설치
+            1. `DesktopPet-Windows-Setup.exe` 다운로드 후 실행
+            2. 시스템 트레이(우측 하단)에 아이콘이 나타나면 완료
+
+            > Windows Defender SmartScreen 경고 시 **추가 정보 → 실행** 클릭
+
             ### Requirements
-            - macOS 14.0 (Sonoma) or later
-            - Apple Silicon (M1 / M2 / M3 / M4)
+            - macOS 14.0 (Sonoma) or later, Apple Silicon
+            - Windows 10/11 (x64)
 
             ### Supported formats
             GIF · APNG · PNG sequence folder · MP4 · MOV · ProRes 4444 · HEVC with Alpha
 
             ---
-            **SHA-256:** `${{ steps.sha.outputs.sha256 }}`
-          files: build/DesktopPet.dmg
+            **SHA-256 (macOS DMG):** `${{ needs.build-and-release.outputs.sha256 }}`
+          files: |
+            DesktopPet.dmg
+            DesktopPet-Windows-Setup.exe
           draft: false
           prerelease: false
         env:

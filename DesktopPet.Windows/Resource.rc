@@ -1,5 +1,8 @@
-#include "Resource.h"
 #include <windows.h>
+// windres defines IDC_STATIC as ((HMENU)-1) which it can't parse as a cast;
+// redefine it as a plain integer before the dialog template.
+#undef IDC_STATIC
+#include "Resource.h"
 
 IDD_SETTINGS DIALOGEX 0, 0, 260, 420
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU

@@ -1,0 +1,74 @@
+name: Build macOS
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    name: Build DesktopPet.app
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build with swiftc
+        run: |
+          SDK=$(xcrun --sdk macosx --show-sdk-path)
+          APP_DIR="$PWD/build/DesktopPet.app"
+          BIN_DIR="$APP_DIR/Contents/MacOS"
+          RES_DIR="$APP_DIR/Contents/Resources"
+
+          mkdir -p "$BIN_DIR" "$RES_DIR"
+
+          swiftc \
+            -sdk "$SDK" \
+            -target arm64-apple-macosx14.0 \
+            -O \
+            -framework AppKit \
+            -framework AVFoundation \
+            -framework CoreGraphics \
+            -framework CoreServices \
+            -framework ServiceManagement \
+            DesktopPet/App/main.swift \
+            DesktopPet/App/AppDelegate.swift \
+            DesktopPet/Settings/AppSettings.swift \
+            DesktopPet/Settings/SettingsView.swift \
+            DesktopPet/Playback/FrameSequence.swift \
+            DesktopPet/Playback/GIFDecoder.swift \
+            DesktopPet/Playback/APNGDecoder.swift \
+            DesktopPet/Playback/PNGSequenceDecoder.swift \
+            DesktopPet/Playback/AnimationPlayer.swift \
+            DesktopPet/Playback/VideoPlayer.swift \
+            DesktopPet/Utilities/PlaceholderAnimation.swift \
+            DesktopPet/Utilities/SecurityScopedAccess.swift \
+            DesktopPet/Window/OverlayWindow.swift \
+            DesktopPet/Window/PetView.swift \
+            DesktopPet/Window/OverlayWindowController.swift \
+            DesktopPet/MenuBar/MenuBarController.swift \
+            -o "$BIN_DIR/DesktopPet"
+
+          cp DesktopPet/App/Info.plist "$APP_DIR/Contents/Info.plist"
+          xcrun actool \
+            --output-format human-readable-text \
+            --notices --warnings \
+            --platform macosx \
+            --minimum-deployment-target 14.0 \
+            --compile "$RES_DIR" \
+            DesktopPet/Assets.xcassets 2>/dev/null || true
+
+      - name: Create DMG
+        run: |
+          hdiutil create \
+            -volname "Desktop Pet" \
+            -srcfolder "$PWD/build/DesktopPet.app" \
+            -ov -format UDZO \
+            "$PWD/build/DesktopPet.dmg"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DesktopPet-macOS
+          path: build/DesktopPet.dmg
