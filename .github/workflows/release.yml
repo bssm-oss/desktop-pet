@@ -1,0 +1,286 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*'   # v1.0.0, v1.2.3, etc.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. v1.2.0)'
+        required: true
+        default: 'v1.0.0'
+
+# Required for creating releases and pushing Cask updates back to master
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build DMG and publish release
+    runs-on: macos-14
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      sha256: ${{ steps.sha.outputs.sha256 }}
+      semver: ${{ steps.version.outputs.semver }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Print Swift and SDK version
+        run: |
+          swift --version
+          xcrun --sdk macosx --show-sdk-path
+
+      - name: Build DesktopPet.app
+        run: |
+          set -euo pipefail
+
+          SDK=$(xcrun --sdk macosx --show-sdk-path)
+          APP="$PWD/build/DesktopPet.app"
+          BIN="$APP/Contents/MacOS"
+          RES="$APP/Contents/Resources"
+
+          mkdir -p "$BIN" "$RES"
+
+          swiftc \
+            -sdk "$SDK" \
+            -target arm64-apple-macosx14.0 \
+            -O \
+            -framework AppKit \
+            -framework AVFoundation \
+            -framework CoreGraphics \
+            -framework CoreServices \
+            -framework ServiceManagement \
+            DesktopPet/App/main.swift \
+            DesktopPet/App/AppDelegate.swift \
+            DesktopPet/Settings/AppSettings.swift \
+            DesktopPet/Settings/SettingsView.swift \
+            DesktopPet/Playback/FrameSequence.swift \
+            DesktopPet/Playback/GIFDecoder.swift \
+            DesktopPet/Playback/APNGDecoder.swift \
+            DesktopPet/Playback/PNGSequenceDecoder.swift \
+            DesktopPet/Playback/AnimationPlayer.swift \
+            DesktopPet/Playback/VideoPlayer.swift \
+            DesktopPet/Utilities/PlaceholderAnimation.swift \
+            DesktopPet/Utilities/SecurityScopedAccess.swift \
+            DesktopPet/Window/OverlayWindow.swift \
+            DesktopPet/Window/PetView.swift \
+            DesktopPet/Window/OverlayWindowController.swift \
+            DesktopPet/MenuBar/MenuBarController.swift \
+            -o "$BIN/DesktopPet"
+
+          cp DesktopPet/App/Info.plist "$APP/Contents/Info.plist"
+          printf 'APPL????' > "$APP/Contents/PkgInfo"
+
+          xcrun actool \
+            --output-format human-readable-text \
+            --notices --warnings \
+            --platform macosx \
+            --minimum-deployment-target 14.0 \
+            --compile "$RES" \
+            DesktopPet/Assets.xcassets \
+          || true
+
+          echo "=== Bundle contents ==="
+          find "$APP" -type f | sort
+
+      - name: Ad-hoc code sign
+        run: |
+          codesign --force --deep --sign - build/DesktopPet.app
+          codesign --verify --verbose build/DesktopPet.app
+
+      - name: Create DMG
+        run: |
+          set -euo pipefail
+
+          mkdir -p build/dmg-stage
+          cp -R build/DesktopPet.app build/dmg-stage/
+          ln -s /Applications build/dmg-stage/Applications
+
+          hdiutil create \
+            -volname "Desktop Pet" \
+            -srcfolder build/dmg-stage \
+            -ov \
+            -format UDZO \
+            build/DesktopPet.dmg
+
+          ls -lh build/DesktopPet.dmg
+
+      - name: Compute SHA256
+        id: sha
+        run: |
+          SHA=$(shasum -a 256 build/DesktopPet.dmg | awk '{print $1}')
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+          echo "SHA256: $SHA"
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          SEMVER="${VERSION#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "semver=$SEMVER" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION  Semver: $SEMVER"
+
+      - name: Patch Casks/desktop-pet.rb
+        run: |
+          VER="${{ steps.version.outputs.semver }}"
+          SHA="${{ steps.sha.outputs.sha256 }}"
+
+          sed -i '' "s/^  version \".*\"/  version \"${VER}\"/" Casks/desktop-pet.rb
+          sed -i '' "s/^  sha256 .*/  sha256 \"${SHA}\"/" Casks/desktop-pet.rb
+
+          echo "=== Updated Cask ==="
+          cat Casks/desktop-pet.rb
+
+      - name: Commit and push updated Cask
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/desktop-pet.rb
+          git diff --staged --quiet \
+            || git commit -m "chore(cask): bump to ${{ steps.version.outputs.semver }} and update SHA256 [skip ci]"
+          git push origin HEAD:master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DesktopPet-macOS
+          path: build/DesktopPet.dmg
+
+  build-windows:
+    name: Build Windows Installer
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref }}" -match '^refs/tags/v') {
+            $version = "${{ github.ref }}" -replace '^refs/tags/v', ''
+          } else {
+            $version = "${{ github.event.inputs.version }}" -replace '^v', ''
+          }
+          echo "semver=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Generate app icon
+        shell: pwsh
+        run: |
+          magick `
+            "DesktopPet/Assets.xcassets/AppIcon.appiconset/icon_16x16.png" `
+            "DesktopPet/Assets.xcassets/AppIcon.appiconset/icon_32x32.png" `
+            "DesktopPet/Assets.xcassets/AppIcon.appiconset/icon_128x128.png" `
+            "DesktopPet/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" `
+            "DesktopPet.Windows/app.ico"
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+
+      - name: Build
+        shell: msys2 {0}
+        run: |
+          cd DesktopPet.Windows
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DINCLUDE_ICON=ON
+          cmake --build build --config Release
+
+      - name: Install NSIS
+        run: choco install nsis --no-progress -y
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.semver }}"
+          & "C:\Program Files (x86)\NSIS\makensis.exe" /DAPP_VERSION=$version DesktopPet.Windows/installer.nsi
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DesktopPet-Windows-Setup
+          path: DesktopPet-Windows-Setup.exe
+
+  release:
+    name: Create GitHub Release
+    needs: [build-and-release, build-windows]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DesktopPet-macOS
+          path: release-assets
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: DesktopPet-Windows-Setup
+          path: release-assets
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.build-and-release.outputs.version }}
+          name: "Desktop Pet ${{ needs.build-and-release.outputs.version }}"
+          body: |
+            ## Desktop Pet ${{ needs.build-and-release.outputs.version }}
+
+            ### Install via Homebrew (recommended)
+            ```bash
+            brew tap bssm-oss/desktop-pet https://github.com/bssm-oss/desktop-pet.git
+            brew install --cask bssm-oss/desktop-pet/desktop-pet
+            # Remove quarantine flag (required for unsigned builds)
+            xattr -cr /Applications/DesktopPet.app
+            open /Applications/DesktopPet.app
+            ```
+
+            ### Direct download (macOS)
+            1. Download **`DesktopPet.dmg`** below
+            2. Open DMG → drag `DesktopPet.app` to **Applications**
+            3. Run in terminal:
+               ```bash
+               xattr -cr /Applications/DesktopPet.app
+               open /Applications/DesktopPet.app
+               ```
+
+            ### Windows 설치
+            1. `DesktopPet-Windows-Setup.exe` 다운로드 후 실행
+            2. 시스템 트레이(우측 하단)에 아이콘이 나타나면 완료
+
+            > Windows Defender SmartScreen 경고 시 **추가 정보 → 실행** 클릭
+
+            ### Requirements
+            - macOS 14.0 (Sonoma) or later, Apple Silicon
+            - Windows 10/11 (x64)
+
+            ### Supported formats
+            GIF · APNG · PNG sequence folder · MP4 · MOV · ProRes 4444 · HEVC with Alpha
+
+            ---
+            **SHA-256 (macOS DMG):** `${{ needs.build-and-release.outputs.sha256 }}`
+          files: |
+            release-assets/DesktopPet.dmg
+            release-assets/DesktopPet-Windows-Setup.exe
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
