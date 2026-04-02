@@ -14,14 +14,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Print Swift and SDK version
+        run: |
+          swift --version
+          xcrun --sdk macosx --show-sdk-path
+
       - name: Build with swiftc
         run: |
-          SDK=$(xcrun --sdk macosx --show-sdk-path)
-          APP_DIR="$PWD/build/DesktopPet.app"
-          BIN_DIR="$APP_DIR/Contents/MacOS"
-          RES_DIR="$APP_DIR/Contents/Resources"
+          set -euo pipefail
 
-          mkdir -p "$BIN_DIR" "$RES_DIR"
+          SDK=$(xcrun --sdk macosx --show-sdk-path)
+          APP="$PWD/build/DesktopPet.app"
+          BIN="$APP/Contents/MacOS"
+          RES="$APP/Contents/Resources"
+
+          mkdir -p "$BIN" "$RES"
 
           swiftc \
             -sdk "$SDK" \
@@ -48,24 +55,41 @@ jobs:
             DesktopPet/Window/PetView.swift \
             DesktopPet/Window/OverlayWindowController.swift \
             DesktopPet/MenuBar/MenuBarController.swift \
-            -o "$BIN_DIR/DesktopPet"
+            -o "$BIN/DesktopPet"
 
-          cp DesktopPet/App/Info.plist "$APP_DIR/Contents/Info.plist"
+          cp DesktopPet/App/Info.plist "$APP/Contents/Info.plist"
+          printf 'APPL????' > "$APP/Contents/PkgInfo"
+
           xcrun actool \
             --output-format human-readable-text \
             --notices --warnings \
             --platform macosx \
             --minimum-deployment-target 14.0 \
-            --compile "$RES_DIR" \
-            DesktopPet/Assets.xcassets 2>/dev/null || true
+            --compile "$RES" \
+            DesktopPet/Assets.xcassets \
+          || true
+
+          echo "=== Bundle contents ==="
+          find "$APP" -type f | sort
+
+      - name: Ad-hoc code sign
+        run: |
+          codesign --force --deep --sign - build/DesktopPet.app
+          codesign --verify --verbose build/DesktopPet.app
 
       - name: Create DMG
         run: |
+          mkdir -p build/dmg-stage
+          cp -R build/DesktopPet.app build/dmg-stage/
+          ln -s /Applications build/dmg-stage/Applications
+
           hdiutil create \
             -volname "Desktop Pet" \
-            -srcfolder "$PWD/build/DesktopPet.app" \
+            -srcfolder build/dmg-stage \
             -ov -format UDZO \
-            "$PWD/build/DesktopPet.dmg"
+            build/DesktopPet.dmg
+
+          ls -lh build/DesktopPet.dmg
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
