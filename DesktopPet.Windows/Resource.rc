@@ -1,0 +1,35 @@
+#include <windows.h>
+// windres defines IDC_STATIC as ((HMENU)-1) which it can't parse as a cast;
+// redefine it as a plain integer before the dialog template.
+#undef IDC_STATIC
+#include "Resource.h"
+
+IDD_SETTINGS DIALOGEX 0, 0, 260, 420
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Desktop Pet Settings"
+FONT 9, "Segoe UI"
+BEGIN
+    GROUPBOX      "Pet Name", IDC_STATIC, 7, 7, 246, 30
+    EDITTEXT      IDC_EDT_LABEL, 14, 16, 150, 14, ES_AUTOHSCROLL
+    PUSHBUTTON    "Import...", IDC_BTN_IMPORT, 172, 14, 74, 18
+    GROUPBOX      "Playback", IDC_STATIC, 7, 44, 246, 60
+    AUTOCHECKBOX  "Playing", IDC_CHK_PLAYING, 14, 58, 60, 14
+    LTEXT         "Speed:", IDC_STATIC, 14, 78, 35, 10
+    CONTROL       "", IDC_SLD_SPEED, "msctls_trackbar32", 1 | WS_TABSTOP, 52, 74, 140, 18
+    LTEXT         "1.0x", IDC_LBL_SPEED, 196, 78, 50, 10
+    GROUPBOX      "Appearance", IDC_STATIC, 7, 112, 246, 100
+    LTEXT         "Opacity:", IDC_STATIC, 14, 128, 40, 10
+    CONTROL       "", IDC_SLD_OPACITY, "msctls_trackbar32", 1 | WS_TABSTOP, 58, 124, 134, 18
+    LTEXT         "100%", IDC_LBL_OPACITY, 196, 128, 50, 10
+    LTEXT         "Scale:", IDC_STATIC, 14, 150, 35, 10
+    CONTROL       "", IDC_SLD_SCALE, "msctls_trackbar32", 1 | WS_TABSTOP, 52, 146, 140, 18
+    LTEXT         "1.00x", IDC_LBL_SCALE, 196, 150, 50, 10
+    AUTOCHECKBOX  "Flip H", IDC_CHK_FLIPH, 14, 172, 80, 14
+    AUTOCHECKBOX  "Flip V", IDC_CHK_FLIPV, 110, 172, 80, 14
+    GROUPBOX      "Behavior", IDC_STATIC, 7, 220, 246, 80
+    AUTOCHECKBOX  "Always on Top", IDC_CHK_ONTOP, 14, 236, 100, 14
+    AUTOCHECKBOX  "Click-Through", IDC_CHK_CLICKTHRU, 14, 256, 100, 14
+    AUTOCHECKBOX  "Lock Position", IDC_CHK_LOCKPOS, 14, 276, 100, 14
+    PUSHBUTTON    "Remove Pet", IDC_BTN_REMOVE, 7, 390, 80, 22
+    DEFPUSHBUTTON "Close", IDOK, 180, 390, 73, 22
+END
