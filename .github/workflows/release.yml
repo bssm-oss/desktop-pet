@@ -242,11 +242,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: DesktopPet-macOS
+          path: release-assets
 
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
           name: DesktopPet-Windows-Setup
+          path: release-assets
 
       # ── 9. Create GitHub Release ──────────────────────────────────────────
       - name: Create GitHub Release
@@ -290,8 +292,8 @@ jobs:
             ---
             **SHA-256 (macOS DMG):** `${{ needs.build-and-release.outputs.sha256 }}`
           files: |
-            DesktopPet.dmg
-            DesktopPet-Windows-Setup.exe
+            release-assets/DesktopPet.dmg
+            release-assets/DesktopPet-Windows-Setup.exe
           draft: false
           prerelease: false
         env:
