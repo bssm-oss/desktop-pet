@@ -81,9 +81,11 @@ jobs:
             --notices --warnings \
             --platform macosx \
             --minimum-deployment-target 14.0 \
+            --app-icon AppIcon \
             --compile "$RES" \
-            DesktopPet/Assets.xcassets \
-          || true
+            DesktopPet/Assets.xcassets
+
+          strings "$RES/Assets.car" | grep -q 'AppIcon'
 
           echo "=== Bundle contents ==="
           find "$APP" -type f | sort

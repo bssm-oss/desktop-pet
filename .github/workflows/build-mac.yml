@@ -16,6 +16,8 @@ jobs:
 
       - name: Build with swiftc
         run: |
+          set -euo pipefail
+
           SDK=$(xcrun --sdk macosx --show-sdk-path)
           APP_DIR="$PWD/build/DesktopPet.app"
           BIN_DIR="$APP_DIR/Contents/MacOS"
@@ -56,8 +58,11 @@ jobs:
             --notices --warnings \
             --platform macosx \
             --minimum-deployment-target 14.0 \
+            --app-icon AppIcon \
             --compile "$RES_DIR" \
-            DesktopPet/Assets.xcassets 2>/dev/null || true
+            DesktopPet/Assets.xcassets
+
+          strings "$RES_DIR/Assets.car" | grep -q 'AppIcon'
 
       - name: Create DMG
         run: |
