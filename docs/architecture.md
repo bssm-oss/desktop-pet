@@ -151,9 +151,9 @@ Frame rate defaults to 24fps; can be overridden.
 
 ## Persistence
 
-`UserDefaults` via `AppSettings` (`ObservableObject`).  
-Every `@Published` property writes to UserDefaults in its `didSet`.  
-Security-scoped bookmarks allow re-opening the last asset after restart without showing the file picker again.
+Pet metadata is persisted in `~/Library/Application Support/desktop-pet/pets.plist` via `PetsStore`.  
+Each record stores the per-pet settings plus the security-scoped bookmark for its imported asset.  
+Legacy `UserDefaults` pet keys are migrated once into the plist store and then left untouched for rollback safety.
 
 ---
 

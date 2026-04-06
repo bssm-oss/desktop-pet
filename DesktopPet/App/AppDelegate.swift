@@ -8,21 +8,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - State
     private var pets: [OverlayWindowController] = []
+    private let petsStore = PetsStore()
     private var menuBarController: MenuBarController!
-
-    // Persisted list of instance IDs so we restore all pets on relaunch
-    private let kInstanceIDs = "petInstanceIDs"
-
-    /// Returns a collision-free ID by taking the max existing numeric suffix and adding 1.
-    /// Using count-based IDs caused collisions: deleting pet-2 from ["pet-1","pet-2","pet-3"]
-    /// made the next pet also "pet-3", silently overwriting its UserDefaults keys.
-    private var nextPetID: String {
-        let existing = UserDefaults.standard.array(forKey: kInstanceIDs) as? [String] ?? []
-        let maxIdx = existing
-            .compactMap { Int($0.replacingOccurrences(of: "pet-", with: "")) }
-            .max() ?? 0
-        return "pet-\(maxIdx + 1)"
-    }
 
     // MARK: - Launch
 
@@ -33,21 +20,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuBarController.onAddPet    = { [weak self] in self?.addPet() }
         menuBarController.onRemovePet = { [weak self] id in self?.removePet(id: id) }
 
-        // Restore previously open pets
-        let savedIDs = UserDefaults.standard.array(forKey: kInstanceIDs) as? [String] ?? []
+        let savedRecords = petsStore.loadRecords()
 
-        if savedIDs.isEmpty {
-            // First launch: open file picker immediately for one pet
+        if savedRecords.isEmpty {
             addPet()
         } else {
-            for id in savedIDs {
-                let settings = AppSettings(instanceID: id)
+            for record in savedRecords {
+                let settings = makeSettings(record: record)
                 let wc = OverlayWindowController(settings: settings)
-                wc.showWindow(nil)
-                if let bookmark = settings.assetBookmark {
-                    wc.loadAssetFromBookmark(bookmark)
+
+                if let bookmark = settings.assetBookmark, wc.loadAssetFromBookmark(bookmark) {
+                    wc.showWindow(nil)
+                    pets.append(wc)
                 }
-                pets.append(wc)
             }
             menuBarController.update(pets: pets)
         }
@@ -59,39 +44,49 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Add / Remove
 
-    /// Creates a new pet, opens the file picker for it.
-    /// The window only appears after the user picks a file.
     func addPet() {
-        let id = nextPetID
-        let settings = AppSettings(instanceID: id)
-        let wc = OverlayWindowController(settings: settings)
+        let urls = menuBarController.openAddPetsPicker()
+        guard !urls.isEmpty else { return }
 
-        // Show file picker — pet window appears only on successful pick
-        menuBarController.openFilePicker(for: wc) // picks file → calls wc.loadAsset
-        // After picker, check if an asset was actually loaded (bookmark set)
-        if settings.assetBookmark != nil {
-            wc.showWindow(nil)
-            pets.append(wc)
-            saveInstanceIDs()
+        var didAddAnyPet = false
+        for url in urls {
+            if addPet(for: url) {
+                didAddAnyPet = true
+            }
+        }
+
+        if didAddAnyPet {
             menuBarController.update(pets: pets)
         }
-        // If user cancelled picker, wc is just discarded
     }
 
     func removePet(id: String) {
         guard let idx = pets.firstIndex(where: { $0.settings.instanceID == id }) else { return }
         let wc = pets[idx]
-        wc.settings.removeAllKeys()
         wc.window?.close()
         pets.remove(at: idx)
-        saveInstanceIDs()
+        petsStore.remove(instanceID: id)
         menuBarController.update(pets: pets)
     }
 
-    // MARK: - Persistence
+    // MARK: - Helpers
 
-    private func saveInstanceIDs() {
-        let ids = pets.map { $0.settings.instanceID }
-        UserDefaults.standard.set(ids, forKey: kInstanceIDs)
+    private func addPet(for url: URL) -> Bool {
+        let record = petsStore.makeNewPetRecord()
+        let settings = makeSettings(record: record)
+        let wc = OverlayWindowController(settings: settings)
+
+        guard wc.loadAsset(url: url) else { return false }
+
+        wc.showWindow(nil)
+        pets.append(wc)
+        petsStore.upsert(settings.toRecord())
+        return true
+    }
+
+    private func makeSettings(record: PetRecord) -> AppSettings {
+        AppSettings(record: record) { [weak self] settings in
+            self?.petsStore.upsert(settings.toRecord())
+        }
     }
 }

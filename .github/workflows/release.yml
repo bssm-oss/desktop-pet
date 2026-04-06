@@ -58,6 +58,7 @@ jobs:
             DesktopPet/App/main.swift \
             DesktopPet/App/AppDelegate.swift \
             DesktopPet/Settings/AppSettings.swift \
+            DesktopPet/Settings/PetsStore.swift \
             DesktopPet/Settings/SettingsView.swift \
             DesktopPet/Playback/FrameSequence.swift \
             DesktopPet/Playback/GIFDecoder.swift \
@@ -82,6 +83,7 @@ jobs:
             --platform macosx \
             --minimum-deployment-target 14.0 \
             --app-icon AppIcon \
+            --output-partial-info-plist "$APP/Contents/asset-info.plist" \
             --compile "$RES" \
             DesktopPet/Assets.xcassets
 

@@ -95,6 +95,7 @@ swiftc \
   DesktopPet/App/main.swift \
   DesktopPet/App/AppDelegate.swift \
   DesktopPet/Settings/AppSettings.swift \
+  DesktopPet/Settings/PetsStore.swift \
   DesktopPet/Settings/SettingsView.swift \
   DesktopPet/Playback/FrameSequence.swift \
   DesktopPet/Playback/GIFDecoder.swift \
@@ -166,12 +167,16 @@ cmake --build build --config Release
 ### 펫 추가하기
 
 1. 🐾 클릭 → **Add Pet…**
-2. 파일 선택 창에서 GIF / APNG / PNG 폴더 / 영상 선택
-3. 선택한 파일이 바로 화면에 떠오릅니다
+2. 파일 선택 창에서 GIF / APNG / PNG 폴더 / 영상을 하나 이상 선택
+3. 선택한 항목마다 펫이 하나씩 바로 화면에 떠오릅니다
 
 ### 여러 마리 동시에 띄우기
 
-**Add Pet…** 을 반복하면 됩니다. 각 펫은 파일, 위치, 크기, 투명도가 모두 독립적입니다.
+**Add Pet…** 에서 여러 파일을 한 번에 고르거나, 필요하면 여러 번 반복해서 추가하면 됩니다. 각 펫은 파일, 위치, 크기, 투명도가 모두 독립적입니다.
+
+### 다시 실행해도 유지됨
+
+가져온 펫과 각 펫의 위치/크기/재생 설정은 `~/Library/Application Support/desktop-pet/pets.plist` 에 저장되며, 앱을 종료하거나 Mac을 재시동한 뒤에도 다시 복원됩니다.
 
 ### 조작
 
