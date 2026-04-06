@@ -7,6 +7,10 @@
 3. `DesktopPet.app` 실행
 4. 현재 공개 릴리즈가 아직 unsigned 상태라면 `xattr -cr /Applications/DesktopPet.app && open /Applications/DesktopPet.app` 으로 quarantine를 해제해야 할 수 있습니다.
 
+## Homebrew 설치 경로
+
+`Casks/desktop-pet.rb` 는 `postflight`에서 `/usr/bin/xattr -cr /Applications/DesktopPet.app` 를 자동 시도합니다. 그래도 Gatekeeper 경고가 남으면 `xattr -cr /Applications/DesktopPet.app && open /Applications/DesktopPet.app` 를 수동으로 실행합니다.
+
 ---
 
 ## Requirements

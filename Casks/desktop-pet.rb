@@ -16,6 +16,22 @@ cask "desktop-pet" do
 
   app "DesktopPet.app"
 
+  postflight do
+    system_command "/usr/bin/xattr",
+                   args: ["-cr", "#{appdir}/DesktopPet.app"],
+                   must_succeed: false
+  end
+
+  caveats do
+    <<~EOS
+      Homebrew will try to clear the app quarantine flag after installation.
+
+      If Gatekeeper still blocks launch on your machine, run:
+        xattr -cr #{appdir}/DesktopPet.app
+        open #{appdir}/DesktopPet.app
+    EOS
+  end
+
   zap trash: [
     "~/Library/Preferences/com.bssm-oss.desktop-pet.plist",
     "~/Library/Application Support/desktop-pet",
