@@ -83,6 +83,7 @@ jobs:
             --platform macosx \
             --minimum-deployment-target 14.0 \
             --app-icon AppIcon \
+            --output-partial-info-plist "$APP/Contents/asset-info.plist" \
             --compile "$RES" \
             DesktopPet/Assets.xcassets
 
