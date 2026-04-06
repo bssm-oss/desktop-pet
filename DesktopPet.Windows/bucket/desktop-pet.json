@@ -3,7 +3,8 @@
     "description": "Desktop Pet - lightweight desktop overlay animation app",
     "homepage": "https://github.com/bssm-oss/desktop-pet",
     "license": "MIT",
-    "url": "https://github.com/bssm-oss/desktop-pet/releases/latest/download/DesktopPet-Windows-Setup.exe",
+    "url": "https://github.com/bssm-oss/desktop-pet/releases/download/v1.2.1/DesktopPet-Windows-Setup.exe",
+    "hash": "b84b547c79d16168a4ac1bd3e6c7836e188cd0a34485214132299ea5b32ef782",
     "innosetup": false,
     "installer": {
         "args": ["/S"]
@@ -14,6 +15,6 @@
     },
     "checkver": "github",
     "autoupdate": {
-        "url": "https://github.com/bssm-oss/desktop-pet/releases/latest/download/DesktopPet-Windows-Setup.exe"
+        "url": "https://github.com/bssm-oss/desktop-pet/releases/download/v$version/DesktopPet-Windows-Setup.exe"
     }
 }
