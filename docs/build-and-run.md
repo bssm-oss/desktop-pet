@@ -5,7 +5,7 @@
 1. [Releases 페이지](https://github.com/bssm-oss/desktop-pet/releases)에서 `DesktopPet.dmg` 다운로드
 2. DMG 열기 → `DesktopPet.app`을 `/Applications` 폴더로 드래그
 3. `DesktopPet.app` 실행
-4. 최신 릴리즈 DMG는 Developer ID 서명과 notarization을 거친 배포물을 기준으로 합니다.
+4. 현재 공개 릴리즈가 아직 unsigned 상태라면 `xattr -cr /Applications/DesktopPet.app && open /Applications/DesktopPet.app` 으로 quarantine를 해제해야 할 수 있습니다.
 
 ---
 

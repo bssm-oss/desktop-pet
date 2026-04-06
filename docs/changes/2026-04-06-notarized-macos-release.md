@@ -31,6 +31,7 @@ The published GitHub DMG was shipping an ad-hoc signed app bundle. Gatekeeper re
 
 - Existing published `v1.2.1` DMG was audited directly with `codesign` and `spctl` and confirmed to be ad-hoc signed and rejected by Gatekeeper.
 - The corrected workflow now performs the exact signing/notarization/stapling steps required for public macOS distribution.
+- The first attempted `v1.2.2` run failed immediately at secret validation because all required Apple release secrets were empty in GitHub Actions.
 
 ## Remaining limit
 
