@@ -23,7 +23,14 @@ brew tap bssm-oss/desktop-pet https://github.com/bssm-oss/desktop-pet.git
 brew install --cask bssm-oss/desktop-pet/desktop-pet
 ```
 
-설치 후 `DesktopPet.app`을 바로 실행하면 됩니다. 최신 릴리즈는 Developer ID 서명과 notarization을 거친 DMG를 기준으로 배포됩니다.
+설치 후 `DesktopPet.app`을 실행하세요. 다만 현재 공개 릴리즈는 아직 Apple notarization 자격 증명이 GitHub Actions에 설정되지 않아 Gatekeeper 경고가 뜰 수 있습니다.
+
+그 경우 임시로:
+
+```bash
+xattr -cr /Applications/DesktopPet.app
+open /Applications/DesktopPet.app
+```
 
 업데이트:
 
@@ -51,7 +58,7 @@ brew uninstall --cask desktop-pet
 3. DMG 열기 → `DesktopPet.app`을 **Applications** 폴더로 드래그
 4. `DesktopPet.app` 실행
 
-> 최신 GitHub Release DMG는 Developer ID 서명과 notarization을 거친 빌드를 기준으로 배포됩니다.
+> 리포지토리에는 notarized 릴리즈 파이프라인이 이미 들어가 있지만, 현재 공개 릴리즈는 Apple 배포용 시크릿이 비어 있어 아직 unsigned 상태일 수 있습니다. 그 경우 `xattr -cr /Applications/DesktopPet.app` 로 quarantine를 해제한 뒤 실행하세요.
 
 ---
 
