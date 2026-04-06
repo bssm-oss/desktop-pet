@@ -28,7 +28,7 @@ All functionality must use Apple frameworks only:
 - AVFoundation for video
 - CoreAnimation / CALayer for rendering
 - CVDisplayLink for frame scheduling
-- UserDefaults for persistence
+- PropertyListEncoder / PropertyListDecoder for the file-backed pet store in Application Support
 - SMAppService for login items
 
 Do NOT add Swift Package Manager dependencies without explicit approval.

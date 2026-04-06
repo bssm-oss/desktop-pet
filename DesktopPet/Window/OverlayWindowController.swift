@@ -9,6 +9,11 @@ import Combine
 
 final class OverlayWindowController: NSWindowController {
 
+    private enum LoadedAsset {
+        case frameSequence(FrameSequence)
+        case video(VideoPlayer)
+    }
+
     // MARK: - Dependencies
     let settings: AppSettings
     private var cancellables = Set<AnyCancellable>()
@@ -143,14 +148,15 @@ final class OverlayWindowController: NSWindowController {
 
     func loadAssetFromBookmark(_ bookmark: Data) -> Bool {
         guard let url = SecurityScopedAccess.resolve(bookmark: bookmark) else { return false }
-        stopCurrentSecurityScopedAccess()
         let didStartSecurityScope = url.startAccessingSecurityScopedResource()
-        currentAssetIsSecurityScoped = didStartSecurityScope
 
-        let didLoad = loadAsset(url: url, preservingSecurityScope: true)
+        let didLoad = loadAsset(
+            url: url,
+            bookmarkData: bookmark,
+            preservingSecurityScope: didStartSecurityScope
+        )
         if !didLoad, didStartSecurityScope {
             url.stopAccessingSecurityScopedResource()
-            currentAssetIsSecurityScoped = false
         }
 
         return didLoad
@@ -164,81 +170,71 @@ final class OverlayWindowController: NSWindowController {
     }
 
     func loadAsset(url: URL) -> Bool {
-        loadAsset(url: url, preservingSecurityScope: false)
+        loadAsset(url: url, bookmarkData: SecurityScopedAccess.bookmark(for: url), preservingSecurityScope: false)
     }
 
-    private func loadAsset(url: URL, preservingSecurityScope: Bool) -> Bool {
-        if !preservingSecurityScope {
-            stopCurrentSecurityScopedAccess()
-        }
+    private func loadAsset(url: URL, bookmarkData: Data?, preservingSecurityScope: Bool) -> Bool {
+        guard let loadedAsset = decodeAsset(url: url) else { return false }
+
+        let previousAssetURL = currentAssetURL
+        let previousAssetWasSecurityScoped = currentAssetIsSecurityScoped
+
+        applyLoadedAsset(loadedAsset)
 
         currentAssetURL = url
-        let ext = url.pathExtension.lowercased()
+        currentAssetIsSecurityScoped = preservingSecurityScope
+        settings.assetBookmark = bookmarkData
 
-        if let bookmark = SecurityScopedAccess.bookmark(for: url) {
-            settings.assetBookmark = bookmark
+        if previousAssetWasSecurityScoped,
+           let previousAssetURL,
+           previousAssetURL != url {
+            previousAssetURL.stopAccessingSecurityScopedResource()
         }
+
+        return true
+    }
+
+    private func decodeAsset(url: URL) -> LoadedAsset? {
+        let ext = url.pathExtension.lowercased()
 
         switch ext {
         case "gif":
-            return loadGIF(url: url)
+            return GIFDecoder.decode(url: url).map(LoadedAsset.frameSequence)
         case "png", "apng":
-            return loadAPNG(url: url)
+            return APNGDecoder.decode(url: url).map(LoadedAsset.frameSequence)
         case "mp4", "mov", "m4v", "avi", "mkv":
-            return loadVideo(url: url)
+            return VideoPlayer(url: url).map(LoadedAsset.video)
         default:
-            var isDir: ObjCBool = false
-            if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue {
-                return loadPNGSequence(directory: url)
-            } else {
-                return loadAPNG(url: url)
+            var isDirectory: ObjCBool = false
+            if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue {
+                return PNGSequenceDecoder.decode(directory: url).map(LoadedAsset.frameSequence)
             }
+            return APNGDecoder.decode(url: url).map(LoadedAsset.frameSequence)
         }
     }
 
-    private func loadGIF(url: URL) -> Bool {
-        isVideoMode = false
-        removeVideoLayer()
-        guard let seq = GIFDecoder.decode(url: url) else { return false }
-        resizeWindow(to: sizeForSequence(seq))
-        animationPlayer.load(seq)
-        if settings.playing { animationPlayer.play() }
-        return true
-    }
+    private func applyLoadedAsset(_ loadedAsset: LoadedAsset) {
+        switch loadedAsset {
+        case .frameSequence(let sequence):
+            isVideoMode = false
+            removeVideoLayer()
+            resizeWindow(to: sizeForSequence(sequence))
+            animationPlayer.load(sequence)
+            if settings.playing { animationPlayer.play() }
 
-    private func loadAPNG(url: URL) -> Bool {
-        isVideoMode = false
-        removeVideoLayer()
-        guard let seq = APNGDecoder.decode(url: url) else { return false }
-        resizeWindow(to: sizeForSequence(seq))
-        animationPlayer.load(seq)
-        if settings.playing { animationPlayer.play() }
-        return true
-    }
-
-    private func loadPNGSequence(directory: URL) -> Bool {
-        isVideoMode = false
-        removeVideoLayer()
-        guard let seq = PNGSequenceDecoder.decode(directory: directory) else { return false }
-        resizeWindow(to: sizeForSequence(seq))
-        animationPlayer.load(seq)
-        if settings.playing { animationPlayer.play() }
-        return true
-    }
-
-    private func loadVideo(url: URL) -> Bool {
-        isVideoMode = true
-        animationPlayer.stop()
-        guard let vp = VideoPlayer(url: url) else { return false }
-        videoPlayer = vp
-        vp.speed = Float(settings.speed)
-        if let rootLayer = petView.layer {
-            vp.playerLayer.frame = rootLayer.bounds
-            vp.playerLayer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
-            rootLayer.addSublayer(vp.playerLayer)
+        case .video(let player):
+            isVideoMode = true
+            animationPlayer.stop()
+            removeVideoLayer()
+            videoPlayer = player
+            player.speed = Float(settings.speed)
+            if let rootLayer = petView.layer {
+                player.playerLayer.frame = rootLayer.bounds
+                player.playerLayer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
+                rootLayer.addSublayer(player.playerLayer)
+            }
+            if settings.playing { player.play() }
         }
-        if settings.playing { vp.play() }
-        return true
     }
 
     private func removeVideoLayer() {

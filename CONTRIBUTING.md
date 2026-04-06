@@ -220,7 +220,7 @@ Follow what is already in the codebase. Key points:
 - `weak var delegate` for all delegate references — no retain cycles
 - No force-unwraps (`!`) unless nil is genuinely impossible, and document why
 - `async/await` for decode operations that run off the main thread
-- All UserDefaults keys namespaced by `instanceID` — never use bare string keys
+- Persist pet state through the shared plist store in Application Support; only use namespaced UserDefaults keys for legacy migration or unrelated app defaults
 
 ---
 

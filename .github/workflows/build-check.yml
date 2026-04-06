@@ -70,3 +70,39 @@ jobs:
 
           echo "✓ Compiled with zero errors and zero warnings"
           ls -lh /tmp/dp-check-build/DesktopPet
+
+      - name: Run PetsStore regression tests
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/dp-tests
+          swiftc Tests/PetsStoreTests.swift DesktopPet/Settings/PetsStore.swift -o /tmp/dp-tests/PetsStoreTests
+          /tmp/dp-tests/PetsStoreTests
+
+      - name: Run OverlayWindowController regression tests
+        run: |
+          set -euo pipefail
+          SDK=$(xcrun --sdk macosx --show-sdk-path)
+          swiftc \
+            -sdk "$SDK" \
+            -target arm64-apple-macosx14.0 \
+            -framework AppKit \
+            -framework AVFoundation \
+            -framework CoreGraphics \
+            -framework CoreServices \
+            -framework ServiceManagement \
+            Tests/OverlayWindowControllerTests.swift \
+            DesktopPet/Settings/AppSettings.swift \
+            DesktopPet/Settings/PetsStore.swift \
+            DesktopPet/Playback/FrameSequence.swift \
+            DesktopPet/Playback/GIFDecoder.swift \
+            DesktopPet/Playback/APNGDecoder.swift \
+            DesktopPet/Playback/PNGSequenceDecoder.swift \
+            DesktopPet/Playback/AnimationPlayer.swift \
+            DesktopPet/Playback/VideoPlayer.swift \
+            DesktopPet/Utilities/PlaceholderAnimation.swift \
+            DesktopPet/Utilities/SecurityScopedAccess.swift \
+            DesktopPet/Window/OverlayWindow.swift \
+            DesktopPet/Window/PetView.swift \
+            DesktopPet/Window/OverlayWindowController.swift \
+            -o /tmp/dp-tests/OverlayWindowControllerTests
+          /tmp/dp-tests/OverlayWindowControllerTests
