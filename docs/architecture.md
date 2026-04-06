@@ -31,7 +31,7 @@ Every Rust macOS crate (`cocoa`, `objc2`) is a thin wrapper around the same Obje
 ```
 AppDelegate
     │
-    ├── AppSettings (UserDefaults, @Published, Combine)
+    ├── AppSettings (ObservableObject, persisted via PetsStore callbacks)
     │
     ├── OverlayWindowController
     │       │
