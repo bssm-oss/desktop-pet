@@ -1,6 +1,5 @@
 // AppSettings.swift
-// Per-instance settings backed by UserDefaults.
-// Each pet has its own instanceID so keys never collide.
+// Per-instance settings for one pet.
 // Observable so SwiftUI views react to changes in real time.
 
 import Foundation
@@ -11,73 +10,49 @@ final class AppSettings: ObservableObject {
 
     // MARK: - Instance identity
     let instanceID: String   // e.g. "pet-1", "pet-2", …
-
-    private let defaults = UserDefaults.standard
+    private var onChange: ((AppSettings) -> Void)?
+    private var isInitializing = true
 
     // MARK: - Published Properties
 
-    @Published var positionX: Double   { didSet { defaults.set(positionX,    forKey: k("positionX")) } }
-    @Published var positionY: Double   { didSet { defaults.set(positionY,    forKey: k("positionY")) } }
-    @Published var scale: Double       { didSet { defaults.set(scale,        forKey: k("scale")) } }
-    @Published var opacity: Double     { didSet { defaults.set(opacity,      forKey: k("opacity")) } }
-    @Published var speed: Double       { didSet { defaults.set(speed,        forKey: k("speed")) } }
-    @Published var clickThrough: Bool  { didSet { defaults.set(clickThrough, forKey: k("clickThrough")) } }
-    @Published var lockPosition: Bool  { didSet { defaults.set(lockPosition, forKey: k("lockPosition")) } }
-    @Published var alwaysOnTop: Bool   { didSet { defaults.set(alwaysOnTop,  forKey: k("alwaysOnTop")) } }
-    @Published var playing: Bool       { didSet { defaults.set(playing,      forKey: k("playing")) } }
-    @Published var label: String       { didSet { defaults.set(label,        forKey: k("label")) } }
-    @Published var flipHorizontal: Bool { didSet { defaults.set(flipHorizontal, forKey: k("flipH")) } }
-    @Published var flipVertical: Bool   { didSet { defaults.set(flipVertical,   forKey: k("flipV")) } }
+    @Published var positionX: Double   { didSet { notifyChangeIfNeeded() } }
+    @Published var positionY: Double   { didSet { notifyChangeIfNeeded() } }
+    @Published var scale: Double       { didSet { notifyChangeIfNeeded() } }
+    @Published var opacity: Double     { didSet { notifyChangeIfNeeded() } }
+    @Published var speed: Double       { didSet { notifyChangeIfNeeded() } }
+    @Published var clickThrough: Bool  { didSet { notifyChangeIfNeeded() } }
+    @Published var lockPosition: Bool  { didSet { notifyChangeIfNeeded() } }
+    @Published var alwaysOnTop: Bool   { didSet { notifyChangeIfNeeded() } }
+    @Published var playing: Bool       { didSet { notifyChangeIfNeeded() } }
+    @Published var label: String       { didSet { notifyChangeIfNeeded() } }
+    @Published var flipHorizontal: Bool { didSet { notifyChangeIfNeeded() } }
+    @Published var flipVertical: Bool   { didSet { notifyChangeIfNeeded() } }
 
     // Security-scoped bookmark for the last imported asset
     var assetBookmark: Data? {
-        get { defaults.data(forKey: k("assetBookmark")) }
-        set { defaults.set(newValue, forKey: k("assetBookmark")) }
+        didSet { notifyChangeIfNeeded() }
     }
 
     // MARK: - Init
 
-    init(instanceID: String) {
-        self.instanceID = instanceID
-
-        // Offset initial position so multiple pets don't stack exactly
-        let idx = Int(instanceID.components(separatedBy: "-").last ?? "1") ?? 1
-        let offset = Double((idx - 1) * 60)
-
-        let id = instanceID   // local copy — self not yet available for k()
-        func kk(_ s: String) -> String { "\(id).\(s)" }
-
-        defaults.register(defaults: [
-            kk("positionX"):    200.0 + offset,
-            kk("positionY"):    200.0 + offset,
-            kk("scale"):        1.0,
-            kk("opacity"):      1.0,
-            kk("speed"):        1.0,
-            kk("clickThrough"): false,
-            kk("lockPosition"): false,
-            kk("alwaysOnTop"):  true,
-            kk("playing"):      true,
-            kk("label"):        "Pet \(idx)",
-            kk("flipH"):        false,
-            kk("flipV"):        false,
-        ])
-
-        positionX       = defaults.double(forKey: kk("positionX"))
-        positionY       = defaults.double(forKey: kk("positionY"))
-        scale           = defaults.double(forKey: kk("scale"))
-        opacity         = defaults.double(forKey: kk("opacity"))
-        speed           = defaults.double(forKey: kk("speed"))
-        clickThrough    = defaults.bool(forKey: kk("clickThrough"))
-        lockPosition    = defaults.bool(forKey: kk("lockPosition"))
-        alwaysOnTop     = defaults.bool(forKey: kk("alwaysOnTop"))
-        playing         = defaults.bool(forKey: kk("playing"))
-        label           = defaults.string(forKey: kk("label")) ?? "Pet \(idx)"
-        flipHorizontal  = defaults.bool(forKey: kk("flipH"))
-        flipVertical    = defaults.bool(forKey: kk("flipV"))
+    init(record: PetRecord, onChange: ((AppSettings) -> Void)? = nil) {
+        self.instanceID = record.instanceID
+        self.positionX = record.positionX
+        self.positionY = record.positionY
+        self.scale = record.scale
+        self.opacity = record.opacity
+        self.speed = record.speed
+        self.clickThrough = record.clickThrough
+        self.lockPosition = record.lockPosition
+        self.alwaysOnTop = record.alwaysOnTop
+        self.playing = record.playing
+        self.label = record.label
+        self.flipHorizontal = record.flipHorizontal
+        self.flipVertical = record.flipVertical
+        self.assetBookmark = record.assetBookmark
+        self.onChange = onChange
+        self.isInitializing = false
     }
-
-    // MARK: - Key helper (usable after init)
-    func k(_ base: String) -> String { "\(instanceID).\(base)" }
 
     // MARK: - Helpers
 
@@ -90,11 +65,29 @@ final class AppSettings: ObservableObject {
         NSPoint(x: positionX, y: positionY)
     }
 
-    /// Remove all UserDefaults keys for this instance.
-    func removeAllKeys() {
-        ["positionX","positionY","scale","opacity","speed",
-         "clickThrough","lockPosition","alwaysOnTop","playing","assetBookmark",
-         "label","flipH","flipV"]
-            .forEach { defaults.removeObject(forKey: k($0)) }
+    func toRecord() -> PetRecord {
+        PetRecord(
+            instanceID: instanceID,
+            positionX: positionX,
+            positionY: positionY,
+            scale: scale,
+            opacity: opacity,
+            speed: speed,
+            clickThrough: clickThrough,
+            lockPosition: lockPosition,
+            alwaysOnTop: alwaysOnTop,
+            playing: playing,
+            label: label,
+            flipHorizontal: flipHorizontal,
+            flipVertical: flipVertical,
+            assetBookmark: assetBookmark
+        )
+    }
+
+    // MARK: - Persistence callback
+
+    private func notifyChangeIfNeeded() {
+        guard !isInitializing else { return }
+        onChange?(self)
     }
 }

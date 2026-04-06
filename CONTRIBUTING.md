@@ -52,6 +52,7 @@ swiftc \
   DesktopPet/App/main.swift \
   DesktopPet/App/AppDelegate.swift \
   DesktopPet/Settings/AppSettings.swift \
+  DesktopPet/Settings/PetsStore.swift \
   DesktopPet/Settings/SettingsView.swift \
   DesktopPet/Playback/FrameSequence.swift \
   DesktopPet/Playback/GIFDecoder.swift \

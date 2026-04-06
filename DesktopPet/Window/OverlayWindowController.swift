@@ -141,13 +141,19 @@ final class OverlayWindowController: NSWindowController {
 
     // MARK: - Asset Loading
 
-    /// Restore asset from a security-scoped bookmark (app restart).
-    func loadAssetFromBookmark(_ bookmark: Data) {
-        guard let url = SecurityScopedAccess.resolve(bookmark: bookmark) else { return }
+    func loadAssetFromBookmark(_ bookmark: Data) -> Bool {
+        guard let url = SecurityScopedAccess.resolve(bookmark: bookmark) else { return false }
         stopCurrentSecurityScopedAccess()
-        _ = url.startAccessingSecurityScopedResource()
-        currentAssetIsSecurityScoped = true
-        loadAsset(url: url)
+        let didStartSecurityScope = url.startAccessingSecurityScopedResource()
+        currentAssetIsSecurityScoped = didStartSecurityScope
+
+        let didLoad = loadAsset(url: url, preservingSecurityScope: true)
+        if !didLoad, didStartSecurityScope {
+            url.stopAccessingSecurityScopedResource()
+            currentAssetIsSecurityScoped = false
+        }
+
+        return didLoad
     }
 
     /// Stop accessing the current security-scoped resource if one is active.
@@ -157,9 +163,15 @@ final class OverlayWindowController: NSWindowController {
         currentAssetIsSecurityScoped = false
     }
 
-    /// Load an asset from a URL (file picker or drag-drop).
-    func loadAsset(url: URL) {
-        stopCurrentSecurityScopedAccess()
+    func loadAsset(url: URL) -> Bool {
+        loadAsset(url: url, preservingSecurityScope: false)
+    }
+
+    private func loadAsset(url: URL, preservingSecurityScope: Bool) -> Bool {
+        if !preservingSecurityScope {
+            stopCurrentSecurityScopedAccess()
+        }
+
         currentAssetURL = url
         let ext = url.pathExtension.lowercased()
 
@@ -169,52 +181,55 @@ final class OverlayWindowController: NSWindowController {
 
         switch ext {
         case "gif":
-            loadGIF(url: url)
+            return loadGIF(url: url)
         case "png", "apng":
-            loadAPNG(url: url)
+            return loadAPNG(url: url)
         case "mp4", "mov", "m4v", "avi", "mkv":
-            loadVideo(url: url)
+            return loadVideo(url: url)
         default:
             var isDir: ObjCBool = false
             if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue {
-                loadPNGSequence(directory: url)
+                return loadPNGSequence(directory: url)
             } else {
-                loadAPNG(url: url)
+                return loadAPNG(url: url)
             }
         }
     }
 
-    private func loadGIF(url: URL) {
+    private func loadGIF(url: URL) -> Bool {
         isVideoMode = false
         removeVideoLayer()
-        guard let seq = GIFDecoder.decode(url: url) else { return }
+        guard let seq = GIFDecoder.decode(url: url) else { return false }
         resizeWindow(to: sizeForSequence(seq))
         animationPlayer.load(seq)
         if settings.playing { animationPlayer.play() }
+        return true
     }
 
-    private func loadAPNG(url: URL) {
+    private func loadAPNG(url: URL) -> Bool {
         isVideoMode = false
         removeVideoLayer()
-        guard let seq = APNGDecoder.decode(url: url) else { return }
+        guard let seq = APNGDecoder.decode(url: url) else { return false }
         resizeWindow(to: sizeForSequence(seq))
         animationPlayer.load(seq)
         if settings.playing { animationPlayer.play() }
+        return true
     }
 
-    private func loadPNGSequence(directory: URL) {
+    private func loadPNGSequence(directory: URL) -> Bool {
         isVideoMode = false
         removeVideoLayer()
-        guard let seq = PNGSequenceDecoder.decode(directory: directory) else { return }
+        guard let seq = PNGSequenceDecoder.decode(directory: directory) else { return false }
         resizeWindow(to: sizeForSequence(seq))
         animationPlayer.load(seq)
         if settings.playing { animationPlayer.play() }
+        return true
     }
 
-    private func loadVideo(url: URL) {
+    private func loadVideo(url: URL) -> Bool {
         isVideoMode = true
         animationPlayer.stop()
-        guard let vp = VideoPlayer(url: url) else { return }
+        guard let vp = VideoPlayer(url: url) else { return false }
         videoPlayer = vp
         vp.speed = Float(settings.speed)
         if let rootLayer = petView.layer {
@@ -223,6 +238,7 @@ final class OverlayWindowController: NSWindowController {
             rootLayer.addSublayer(vp.playerLayer)
         }
         if settings.playing { vp.play() }
+        return true
     }
 
     private func removeVideoLayer() {
@@ -278,7 +294,7 @@ extension OverlayWindowController: AnimationPlayerDelegate {
 
 extension OverlayWindowController: PetViewDelegate {
     func petView(_ view: PetView, didDropFileAt url: URL) {
-        loadAsset(url: url)
+        _ = loadAsset(url: url)
     }
 
     func petViewDidFinishDrag(_ view: PetView) {

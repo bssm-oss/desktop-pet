@@ -217,13 +217,27 @@ final class MenuBarController: NSObject {
 
     // MARK: - File Picker
 
+    func openAddPetsPicker() -> [URL] {
+        let panel = makeImportOpenPanel(allowsMultipleSelection: true, petName: nil)
+        NSApp.activate(ignoringOtherApps: true)
+        return panel.runModal() == .OK ? panel.urls : []
+    }
+
     func openFilePicker(for pet: OverlayWindowController) {
         settingsPanels[pet.settings.instanceID]?.orderOut(nil)
+        let panel = makeImportOpenPanel(allowsMultipleSelection: false, petName: pet.settings.label)
 
+        NSApp.activate(ignoringOtherApps: true)
+        if panel.runModal() == .OK, let url = panel.url {
+            _ = pet.loadAsset(url: url)
+        }
+    }
+
+    private func makeImportOpenPanel(allowsMultipleSelection: Bool, petName: String?) -> NSOpenPanel {
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
         panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
+        panel.allowsMultipleSelection = allowsMultipleSelection
         panel.allowedContentTypes = [
             UTType.gif,
             UTType.png,
@@ -232,14 +246,15 @@ final class MenuBarController: NSObject {
             UTType.quickTimeMovie,
             UTType.folder
         ]
-        let petName = pet.settings.label
-        panel.message = "Choose an animation for \"\(petName)\"\n\nSupported: GIF · APNG · PNG sequence folder · MP4 · MOV"
         panel.prompt = "Open"
 
-        NSApp.activate(ignoringOtherApps: true)
-        if panel.runModal() == .OK, let url = panel.url {
-            pet.loadAsset(url: url)
+        if let petName {
+            panel.message = "Choose an animation for \"\(petName)\"\n\nSupported: GIF · APNG · PNG sequence folder · MP4 · MOV"
+        } else {
+            panel.message = "Choose one or more animations\n\nSupported: GIF · APNG · PNG sequence folder · MP4 · MOV"
         }
+
+        return panel
     }
 
     // MARK: - Sync
