@@ -26,6 +26,9 @@ cask "desktop-pet" do
     <<~EOS
       Homebrew will try to clear the app quarantine flag after installation.
 
+      If Homebrew installs from cached API metadata on your machine, reinstall with:
+        HOMEBREW_NO_INSTALL_FROM_API=1 brew reinstall --cask bssm-oss/desktop-pet/desktop-pet
+
       If Gatekeeper still blocks launch on your machine, run:
         xattr -cr #{appdir}/DesktopPet.app
         open #{appdir}/DesktopPet.app

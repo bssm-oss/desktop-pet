@@ -25,6 +25,12 @@ brew install --cask bssm-oss/desktop-pet/desktop-pet
 
 Homebrew 설치 경로에서는 cask `postflight`가 `DesktopPet.app`의 quarantine 해제를 자동 시도합니다. 설치 후 먼저 그냥 실행해 보세요.
 
+제가 실제로 확인한 가장 확실한 명령은 아래입니다:
+
+```bash
+HOMEBREW_NO_INSTALL_FROM_API=1 brew reinstall --cask bssm-oss/desktop-pet/desktop-pet
+```
+
 만약 일부 macOS 환경에서 여전히 경고가 뜨면 수동으로:
 
 ```bash
@@ -58,7 +64,7 @@ brew uninstall --cask desktop-pet
 3. DMG 열기 → `DesktopPet.app`을 **Applications** 폴더로 드래그
 4. `DesktopPet.app` 실행
 
-> Homebrew 설치는 cask postflight가 quarantine 해제를 자동 시도합니다. DMG 직접 설치는 여전히 수동 `xattr -cr /Applications/DesktopPet.app` 이 필요할 수 있습니다.
+> Homebrew 설치는 cask postflight가 quarantine 해제를 자동 시도합니다. 현재 Homebrew에서 tap 파일 대신 캐시된 API 메타데이터를 쓰는 경우에는 `HOMEBREW_NO_INSTALL_FROM_API=1 brew reinstall --cask ...` 가 가장 확실한 경로였습니다. DMG 직접 설치는 여전히 수동 `xattr -cr /Applications/DesktopPet.app` 이 필요할 수 있습니다.
 
 ---
 

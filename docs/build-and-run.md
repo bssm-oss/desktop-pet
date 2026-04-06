@@ -9,7 +9,15 @@
 
 ## Homebrew 설치 경로
 
-`Casks/desktop-pet.rb` 는 `postflight`에서 `/usr/bin/xattr -cr /Applications/DesktopPet.app` 를 자동 시도합니다. 그래도 Gatekeeper 경고가 남으면 `xattr -cr /Applications/DesktopPet.app && open /Applications/DesktopPet.app` 를 수동으로 실행합니다.
+`Casks/desktop-pet.rb` 는 `postflight`에서 `/usr/bin/xattr -cr /Applications/DesktopPet.app` 를 자동 시도합니다.
+
+실제 검증에서 가장 확실했던 명령:
+
+```bash
+HOMEBREW_NO_INSTALL_FROM_API=1 brew reinstall --cask bssm-oss/desktop-pet/desktop-pet
+```
+
+그래도 Gatekeeper 경고가 남으면 `xattr -cr /Applications/DesktopPet.app && open /Applications/DesktopPet.app` 를 수동으로 실행합니다.
 
 ---
 

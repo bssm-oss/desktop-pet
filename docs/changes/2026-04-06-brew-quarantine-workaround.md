@@ -14,7 +14,7 @@ The public macOS release is still blocked from full notarized distribution becau
 
 - `brew install --cask --no-quarantine ...` was tested on the current Homebrew version and is disabled, so the repo-local workaround path remains the cask `postflight` hook.
 - The cask definition now contains a `postflight` block and a matching user-visible fallback caveat.
-- The documented brew path now aligns with the actual cask behavior.
+- A real reinstall with `HOMEBREW_NO_INSTALL_FROM_API=1 brew reinstall --cask bssm-oss/desktop-pet/desktop-pet` removed `com.apple.quarantine` from `/Applications/DesktopPet.app` and the app launched successfully.
 
 ## Remaining limit
 
