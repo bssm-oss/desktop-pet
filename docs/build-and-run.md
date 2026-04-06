@@ -4,8 +4,8 @@
 
 1. [Releases 페이지](https://github.com/bssm-oss/desktop-pet/releases)에서 `DesktopPet.dmg` 다운로드
 2. DMG 열기 → `DesktopPet.app`을 `/Applications` 폴더로 드래그
-3. 처음 실행 시 경고가 뜨면: **시스템 설정 → 개인 정보 보호 및 보안 → "확인 없이 열기"**
-4. 또는 터미널: `xattr -cr /Applications/DesktopPet.app && open /Applications/DesktopPet.app`
+3. `DesktopPet.app` 실행
+4. 최신 릴리즈 DMG는 Developer ID 서명과 notarization을 거친 배포물을 기준으로 합니다.
 
 ---
 

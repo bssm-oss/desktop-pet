@@ -23,21 +23,12 @@ brew tap bssm-oss/desktop-pet https://github.com/bssm-oss/desktop-pet.git
 brew install --cask bssm-oss/desktop-pet/desktop-pet
 ```
 
-설치 후 **처음 실행 시 quarantine 해제**가 필요합니다:
-
-```bash
-xattr -cr /Applications/DesktopPet.app
-open /Applications/DesktopPet.app
-```
-
-> 이 명령은 macOS가 인터넷에서 다운로드된 앱에 붙이는 격리 플래그를 제거합니다.  
-> Apple 개발자 서명이 없는 앱은 이 과정 없이 "손상됨" 경고가 뜹니다.
+설치 후 `DesktopPet.app`을 바로 실행하면 됩니다. 최신 릴리즈는 Developer ID 서명과 notarization을 거친 DMG를 기준으로 배포됩니다.
 
 업데이트:
 
 ```bash
 brew upgrade --cask desktop-pet
-xattr -cr /Applications/DesktopPet.app   # 업데이트 후에도 한 번 실행
 ```
 
 삭제:
@@ -58,19 +49,9 @@ brew uninstall --cask desktop-pet
 1. 이 페이지 오른쪽 **[Releases](https://github.com/bssm-oss/desktop-pet/releases)** 클릭
 2. 최신 버전의 **`DesktopPet.dmg`** 다운로드
 3. DMG 열기 → `DesktopPet.app`을 **Applications** 폴더로 드래그
-4. 터미널에서 quarantine 해제 후 실행:
+4. `DesktopPet.app` 실행
 
-```bash
-xattr -cr /Applications/DesktopPet.app
-open /Applications/DesktopPet.app
-```
-
-> **왜 이 명령이 필요한가요?**  
-> Apple은 앱스토어 외부에서 받은 앱에 격리(quarantine) 플래그를 붙입니다.  
-> Apple Developer Program($99/년) 서명이 없는 오픈소스 앱은 이 플래그를 수동으로 제거해야 합니다.  
-> `xattr -cr`은 앱 파일 자체를 수정하지 않으며, macOS의 메타데이터만 제거합니다.
-
-또는 GUI로: **시스템 설정 → 개인 정보 보호 및 보안 → "확인 없이 열기"** 클릭
+> 최신 GitHub Release DMG는 Developer ID 서명과 notarization을 거친 빌드를 기준으로 배포됩니다.
 
 ---
 
@@ -114,6 +95,8 @@ swiftc \
 cp DesktopPet/App/Info.plist build/DesktopPet.app/Contents/Info.plist
 open build/DesktopPet.app
 ```
+
+> 소스에서 직접 빌드한 로컬 앱은 Apple 배포용 notarization 대상이 아닙니다. 필요하면 자신의 Apple 개발자 계정으로 서명하거나, 로컬 테스트 용도로만 실행하세요.
 
 ---
 

@@ -17,10 +17,10 @@
     <string>com.bssm-oss.desktop-pet</string>
 
     <key>CFBundleVersion</key>
-    <string>5</string>
+    <string>6</string>
 
     <key>CFBundleShortVersionString</key>
-    <string>1.2.1</string>
+    <string>1.2.2</string>
 
     <key>CFBundleExecutable</key>
     <string>DesktopPet</string>

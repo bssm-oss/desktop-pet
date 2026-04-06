@@ -67,6 +67,14 @@
 
 ---
 
+## Release installation
+
+**Problem:** A GitHub release build is blocked by Gatekeeper with a malware verification warning.  
+**Cause:** The downloaded app bundle or DMG is unsigned, improperly signed, or not notarized for public distribution.  
+**Fix:** Rebuild the release through the notarized GitHub workflow. Do not treat `xattr -cr` as the product fix for published releases.
+
+---
+
 ## Import failures
 
 **Problem:** GIF loads but shows wrong colors or missing frames.  
