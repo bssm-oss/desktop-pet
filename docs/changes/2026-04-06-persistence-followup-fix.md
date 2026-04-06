@@ -28,7 +28,7 @@ The initial 1.2.0 plist-store release shipped the requested file-backed persiste
 
 - Failed imports no longer poison saved pet state.
 - CI now exercises both the store migration path and the failed-import safety path.
-- The next published release can truthfully claim both persistence correctness and repeatable verification.
+- The published `v1.2.1` release now carries both the persistence fix and the repeatable verification chain.
 
 ## Verification
 
@@ -39,8 +39,7 @@ The initial 1.2.0 plist-store release shipped the requested file-backed persiste
 ## Remaining limits
 
 - The repo still uses standalone Swift executables instead of a first-class XCTest target.
-- Winget manifest SHA still has to be updated from the final published Windows installer digest after the patch release is created.
 
 ## Follow-up
 
-- Publish `v1.2.1`, then update Windows release metadata that depends on the final installer digest.
+- Replace the standalone Swift regression harnesses with a first-class test target when the project adopts one.
