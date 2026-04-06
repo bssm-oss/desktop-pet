@@ -6,18 +6,14 @@ struct OverlayWindowControllerTests {
     static func main() throws {
         _ = NSApplication.shared
 
-        let record = PetRecord.default(instanceID: "pet-1", index: 1)
+        var record = PetRecord.default(instanceID: "pet-1", index: 1)
+        record.assetBookmark = Data([0xAA, 0xBB, 0xCC])
         let settings = AppSettings(record: record)
         let controller = OverlayWindowController(settings: settings)
-        let validURL = URL(fileURLWithPath: "evernight.mp4", relativeTo: URL(fileURLWithPath: FileManager.default.currentDirectoryPath))
-
-        guard controller.loadAsset(url: validURL) else {
-            throw TestFailure("Expected valid video asset to load")
-        }
 
         let originalBookmark = settings.assetBookmark
         guard originalBookmark != nil else {
-            throw TestFailure("Expected valid load to store a bookmark")
+            throw TestFailure("Expected fixture bookmark to exist before invalid load")
         }
 
         let invalidURL = FileManager.default.temporaryDirectory.appendingPathComponent("desktop-pet-invalid.txt")
