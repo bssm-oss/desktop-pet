@@ -1,5 +1,6 @@
 #pragma once
 #include "FrameSequence.h"
+#include <memory>
 #include <string>
 
 class OverlayWindow;
@@ -17,7 +18,7 @@ public:
 
     void setDelegate(Delegate* d) { delegate_ = d; }
     void setSpeed(double speed);
-    void load(const FrameSequence& seq);
+    void load(std::shared_ptr<const FrameSequence> seq);
     void play();
     void pause();
     void stop();
@@ -27,7 +28,7 @@ public:
 
 private:
     Delegate* delegate_ = nullptr;
-    FrameSequence sequence_;
+    std::shared_ptr<const FrameSequence> sequence_;
     double speed_ = 1.0;
     double playbackTime_ = 0.0;
     int lastFrameIndex_ = -1;

@@ -9,18 +9,18 @@ void AnimationPlayer::setSpeed(double speed) {
     speed_ = std::clamp(speed, 0.1, 8.0);
 }
 
-void AnimationPlayer::load(const FrameSequence& seq) {
+void AnimationPlayer::load(std::shared_ptr<const FrameSequence> seq) {
     stop();
-    sequence_ = seq;
+    sequence_ = std::move(seq);
     playbackTime_ = 0;
     lastFrameIndex_ = -1;
-    if (sequence_.count() > 0 && delegate_) {
-        delegate_->onFrame(0, sequence_.frames[0]);
+    if (sequence_ && sequence_->count() > 0 && delegate_) {
+        delegate_->onFrame(0, sequence_->frames[0]);
     }
 }
 
 void AnimationPlayer::play() {
-    if (playing_ || sequence_.count() == 0) return;
+    if (playing_ || !sequence_ || sequence_->count() == 0) return;
     playing_ = true;
 }
 
@@ -35,14 +35,14 @@ void AnimationPlayer::stop() {
 }
 
 void AnimationPlayer::tick(double deltaSeconds) {
-    if (!playing_ || sequence_.count() == 0) return;
+    if (!playing_ || !sequence_ || sequence_->count() == 0) return;
 
     playbackTime_ += deltaSeconds * speed_;
-    int idx = sequence_.frameIndexAt(playbackTime_);
+    int idx = sequence_->frameIndexAt(playbackTime_);
     if (idx == lastFrameIndex_) return;
     lastFrameIndex_ = idx;
 
     if (delegate_) {
-        delegate_->onFrame(idx, sequence_.frames[idx]);
+        delegate_->onFrame(idx, sequence_->frames[idx]);
     }
 }

@@ -2,10 +2,11 @@
 #include <windows.h>
 #include <string>
 #include <functional>
+#include <memory>
 #include "../Playback/AnimationPlayer.h"
 #include "../Playback/FrameSequence.h"
 
-class AppSettings;
+struct AppSettings;
 
 class OverlayWindow : public AnimationPlayer::Delegate {
 public:
@@ -21,9 +22,9 @@ public:
     void setClickThrough(bool enabled);
     void setAlwaysOnTop(bool enabled);
     void setOpacity(BYTE alpha);
-    FrameSequence* loadAsset(const std::wstring& path);
+    std::shared_ptr<FrameSequence> loadAsset(const std::wstring& path);
     void loadPlaceholder();
-    void loadSequence(FrameSequence* seq);
+    void loadSequence(const std::shared_ptr<FrameSequence>& seq);
     void applySettings();
     void renderLastFrame();
 
@@ -47,7 +48,8 @@ private:
     HWND hwnd_ = nullptr;
     AppSettings& settings_;
     BYTE opacity_ = 255;
-    FrameSequence::Frame lastFrame_;
+    std::shared_ptr<FrameSequence> displayedSequence_;
+    const FrameSequence::Frame* lastFrame_ = nullptr;
     int naturalWidth_ = 200;
     int naturalHeight_ = 200;
     bool isVideoMode_ = false;
@@ -56,12 +58,13 @@ private:
     POINT dragStartMouse_ = {};
     POINT dragStartWindow_ = {};
 
-    // Cached render resources — reallocated only on size change
-    HDC   hdcMem_    = nullptr;
+    // Cached render resources, reallocated only on size change.
+    HDC hdcMem_ = nullptr;
     HBITMAP hbmCache_ = nullptr;
+    HBITMAP hbmCacheOld_ = nullptr;
     void* bitsCache_ = nullptr;
-    int   cachedW_   = 0;
-    int   cachedH_   = 0;
+    int cachedW_ = 0;
+    int cachedH_ = 0;
 
     static const wchar_t* CLASS_NAME;
     static bool classRegistered_;

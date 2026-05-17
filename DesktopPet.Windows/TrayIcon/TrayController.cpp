@@ -6,6 +6,24 @@
 #include <shellapi.h>
 #include <algorithm>
 
+namespace {
+struct ActionMenuSpec {
+    const wchar_t* label;
+    UINT importBase;
+    UINT playBase;
+    const char* key;
+};
+
+constexpr ActionMenuSpec kActionMenus[] = {
+    { L"Idle",       WM_PET_IMPORT_IDLE,       WM_PET_PLAY_IDLE,       "idle" },
+    { L"Gesture",    WM_PET_IMPORT_GESTURE,    WM_PET_PLAY_GESTURE,    "gesture" },
+    { L"Reaction",   WM_PET_IMPORT_REACTION,   WM_PET_PLAY_REACTION,   "reaction" },
+    { L"Locomotion", WM_PET_IMPORT_LOCOMOTION, WM_PET_PLAY_LOCOMOTION, "locomotion" },
+    { L"Focus",      WM_PET_IMPORT_FOCUS,      WM_PET_PLAY_FOCUS,      "focus" },
+    { L"Special",    WM_PET_IMPORT_SPECIAL,    WM_PET_PLAY_SPECIAL,    "special" },
+};
+}
+
 TrayController::TrayController() {
     nid_.cbSize = sizeof(nid_);
     nid_.uID = IDR_TRAY_ICON;
@@ -59,7 +77,17 @@ void TrayController::showContextMenu(HWND hwnd) {
         AppendMenuW(hMenu_, MF_GRAYED | MF_STRING, 0, header.c_str());
 
         AppendMenuW(hMenu_, MF_STRING, WM_PET_SETTINGS + (idx - 1), L"  Settings...");
-        AppendMenuW(hMenu_, MF_STRING, WM_PET_SETTINGS + 100 + (idx - 1), L"  Import Animation...");
+        HMENU hImportMenu = CreatePopupMenu();
+        HMENU hPlayMenu = CreatePopupMenu();
+        for (const auto& action : kActionMenus) {
+            AppendMenuW(hImportMenu, MF_STRING, action.importBase + (idx - 1), action.label);
+            const bool hasAction = pet->settings().actionPaths.find(action.key) != pet->settings().actionPaths.end();
+            UINT flags = MF_STRING | (hasAction ? 0 : MF_GRAYED);
+            if (pet->settings().currentAction == action.key) flags |= MF_CHECKED;
+            AppendMenuW(hPlayMenu, flags, action.playBase + (idx - 1), action.label);
+        }
+        AppendMenuW(hMenu_, MF_POPUP, (UINT_PTR)hImportMenu, L"  Import Action");
+        AppendMenuW(hMenu_, MF_POPUP, (UINT_PTR)hPlayMenu, L"  Play Action");
         AppendMenuW(hMenu_, MF_STRING, WM_PET_REMOVE + (idx - 1), L"  Remove");
         ++idx;
     }

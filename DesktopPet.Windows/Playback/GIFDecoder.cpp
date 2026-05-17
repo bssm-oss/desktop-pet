@@ -31,11 +31,27 @@ FrameSequence* decode(const std::wstring& filePath) {
     decoder->GetFrameCount(&frameCount);
     if (frameCount == 0) { decoder->Release(); return nullptr; }
 
-    IWICBitmapFrameDecode* firstFrame = nullptr;
-    if (FAILED(decoder->GetFrame(0, &firstFrame))) { decoder->Release(); return nullptr; }
     UINT canvasW = 0, canvasH = 0;
-    firstFrame->GetSize(&canvasW, &canvasH);
-    firstFrame->Release();
+    IWICMetadataQueryReader* decoderMeta = nullptr;
+    if (SUCCEEDED(decoder->GetMetadataQueryReader(&decoderMeta))) {
+        PROPVARIANT prop;
+        PropVariantInit(&prop);
+        if (SUCCEEDED(decoderMeta->GetMetadataByName(L"/logscrdesc/Width", &prop)) && prop.vt == VT_UI2)
+            canvasW = prop.uiVal;
+        PropVariantClear(&prop);
+        PropVariantInit(&prop);
+        if (SUCCEEDED(decoderMeta->GetMetadataByName(L"/logscrdesc/Height", &prop)) && prop.vt == VT_UI2)
+            canvasH = prop.uiVal;
+        PropVariantClear(&prop);
+        decoderMeta->Release();
+    }
+
+    if (canvasW == 0 || canvasH == 0) {
+        IWICBitmapFrameDecode* firstFrame = nullptr;
+        if (FAILED(decoder->GetFrame(0, &firstFrame))) { decoder->Release(); return nullptr; }
+        firstFrame->GetSize(&canvasW, &canvasH);
+        firstFrame->Release();
+    }
 
     if (canvasW == 0 || canvasH == 0) { decoder->Release(); return nullptr; }
 
