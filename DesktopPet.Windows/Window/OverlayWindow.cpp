@@ -19,8 +19,12 @@ OverlayWindow::OverlayWindow(AppSettings& settings) : settings_(settings) {}
 OverlayWindow::~OverlayWindow() { close(); }
 
 void OverlayWindow::freeRenderCache() {
-    if (hdcMem_)   { DeleteDC(hdcMem_);       hdcMem_    = nullptr; }
+    if (hdcMem_ && hbmCacheOld_) {
+        SelectObject(hdcMem_, hbmCacheOld_);
+        hbmCacheOld_ = nullptr;
+    }
     if (hbmCache_) { DeleteObject(hbmCache_); hbmCache_  = nullptr; }
+    if (hdcMem_)   { DeleteDC(hdcMem_);       hdcMem_    = nullptr; }
     bitsCache_ = nullptr;
     cachedW_ = 0;
     cachedH_ = 0;
@@ -89,22 +93,22 @@ void OverlayWindow::applySettings() {
 }
 
 void OverlayWindow::renderLastFrame() {
-    if (lastFrame_.pixels.empty()) return;
-    renderFrame(lastFrame_);
+    if (!lastFrame_ || lastFrame_->pixels.empty()) return;
+    renderFrame(*lastFrame_);
 }
 
-FrameSequence* OverlayWindow::loadAsset(const std::wstring& path) {
-    FrameSequence* seq = nullptr;
+std::shared_ptr<FrameSequence> OverlayWindow::loadAsset(const std::wstring& path) {
+    std::shared_ptr<FrameSequence> seq;
     std::wstring ext = PathFindExtensionW(path.c_str());
     std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
 
-    if (ext == L".gif") seq = GIFDecoder::decode(path);
+    if (ext == L".gif") seq.reset(GIFDecoder::decode(path));
     else {
         DWORD attrs = GetFileAttributesW(path.c_str());
         if (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY))
-            seq = PNGSequenceDecoder::decode(path);
+            seq.reset(PNGSequenceDecoder::decode(path));
         else
-            seq = APNGDecoder::decode(path);
+            seq.reset(APNGDecoder::decode(path));
     }
     if (seq) loadSequence(seq);
     settings_.assetPath = path;
@@ -112,17 +116,18 @@ FrameSequence* OverlayWindow::loadAsset(const std::wstring& path) {
 }
 
 void OverlayWindow::loadPlaceholder() {
-    auto* seq = PlaceholderAnimation::make(200, 24);
+    std::shared_ptr<FrameSequence> seq(PlaceholderAnimation::make(200, 24));
     if (seq) loadSequence(seq);
     settings_.assetPath.clear();
 }
 
-void OverlayWindow::loadSequence(FrameSequence* seq) {
+void OverlayWindow::loadSequence(const std::shared_ptr<FrameSequence>& seq) {
     if (!seq || seq->frames.empty()) return;
     isVideoMode_ = false;
+    displayedSequence_ = seq;
     naturalWidth_ = seq->frames[0].width;
     naturalHeight_ = seq->frames[0].height;
-    lastFrame_ = seq->frames[0];
+    lastFrame_ = &seq->frames[0];
     applyScale(settings_.scale);
     renderFrame(seq->frames[0]);
 }
@@ -141,7 +146,8 @@ void OverlayWindow::applyScale(double scale) {
 }
 
 void OverlayWindow::onFrame(int frameIndex, const FrameSequence::Frame& frame) {
-    lastFrame_ = frame;
+    (void)frameIndex;
+    lastFrame_ = &frame;
     renderFrame(frame);
 }
 
@@ -156,9 +162,7 @@ void OverlayWindow::renderFrame(const FrameSequence::Frame& frame) {
 
     // Reallocate destination cache when output size changes
     if (dstW != cachedW_ || dstH != cachedH_) {
-        if (hdcMem_)   { DeleteDC(hdcMem_);       hdcMem_   = nullptr; }
-        if (hbmCache_) { DeleteObject(hbmCache_); hbmCache_ = nullptr; }
-        bitsCache_ = nullptr;
+        freeRenderCache();
 
         hdcMem_ = CreateCompatibleDC(nullptr);
 
@@ -174,7 +178,7 @@ void OverlayWindow::renderFrame(const FrameSequence::Frame& frame) {
             DIB_RGB_COLORS, &bitsCache_, nullptr, 0);
         if (!hbmCache_) return;
 
-        SelectObject(hdcMem_, hbmCache_);
+        hbmCacheOld_ = (HBITMAP)SelectObject(hdcMem_, hbmCache_);
         cachedW_ = dstW;
         cachedH_ = dstH;
     }

@@ -1,9 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
-project(DesktopPet VERSION 1.2.2 LANGUAGES CXX)
+project(DesktopPet VERSION 1.2.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
 
 set(SOURCES
     App/WinMain.cpp
@@ -77,6 +76,7 @@ if(MSVC)
 endif()
 
 if(MINGW)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
     # windres must output COFF object files (.o) so GCC can link them.
     # Microsoft binary .res format is not accepted by the MinGW linker.
     add_custom_command(

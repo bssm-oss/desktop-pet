@@ -2,10 +2,11 @@
 #include <windows.h>
 #include <string>
 #include <vector>
+#include <map>
 #include <memory>
 
 class OverlayWindow;
-class TrayController;
+struct TrayController;
 class AnimationPlayer;
 struct AppSettings;
 struct FrameSequence;
@@ -28,6 +29,23 @@ public:
     static void setStartupEnabled(bool enabled);
 
 private:
+    struct PetEntry {
+        std::unique_ptr<AppSettings> settings;
+        std::unique_ptr<OverlayWindow> window;
+        std::unique_ptr<class AnimationPlayer> player;
+        std::shared_ptr<FrameSequence> sequence;
+        std::map<std::string, std::shared_ptr<FrameSequence>> actionCache;
+        double actionRemaining = 0.0;
+        double nextDecisionIn = 0.0;
+        bool actionLocked = false;
+        std::string lastAutoAction;
+    };
+
+    void loadAction(PetEntry& pet, const std::string& action, bool manual = true);
+    void importAction(PetEntry& pet, const std::string& action);
+    void tickScheduler(PetEntry& pet, double deltaSeconds);
+    std::string chooseAutoAction(const PetEntry& pet) const;
+    double randomIdleDelay(const PetEntry& pet) const;
     void restorePets();
     void addDefaultPet();
     void processPendingRemoves();
@@ -35,13 +53,6 @@ private:
     std::vector<std::string> loadInstanceIDs();
     int nextPetIndex();
     int petCounter_ = 0;
-
-    struct PetEntry {
-        std::unique_ptr<AppSettings> settings;
-        std::unique_ptr<OverlayWindow> window;
-        std::unique_ptr<class AnimationPlayer> player;
-        std::unique_ptr<FrameSequence> sequence;
-    };
 
     std::vector<PetEntry> pets_;
     std::unique_ptr<TrayController> tray_;
